@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>:root { color-scheme: light; } body { margin: 0; } [hidden] { display: none !important; }</style>
+<title>Carnet Flip 7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=DM+Sans:opsz,wght@9..40,400;9..40,600&display=swap">
+<style>
+/* Layout: one narrow column, one card per player at the table, the round sheet underneath */
+:root {
+  --ground: #EAF2F0; --surface: #FFFFFF; --ink: #10292D; --muted: #56706F; --line: #D2E0DC;
+  --accent: #F4B000; --on-accent: #231A00; --bust: #C8412F;
+  --display: "Bungee", "Arial Black", Impact, sans-serif;
+  --body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0B1C1F; --surface: #13292C; --ink: #E4F0EE; --muted: #8EA6A6; --line: #244140;
+    --accent: #FFC233; --bust: #F2705F; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0B1C1F; --surface: #13292C; --ink: #E4F0EE; --muted: #8EA6A6; --line: #244140;
+  --accent: #FFC233; --bust: #F2705F; color-scheme: dark;
+}
+body { background: var(--ground); color: var(--ink); font: 16px/1.45 var(--body); padding-inline: 16px; }
+main { max-width: 34rem; margin: 0 auto; padding-block: 2rem 3rem; display: grid; gap: 1.25rem; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: .4; cursor: default; }
+
+header { display: flex; align-items: end; justify-content: space-between; gap: .5rem 1rem; flex-wrap: wrap; }
+h1 { font: 400 2.4rem/1 var(--display); margin: 0; }
+h1 b {
+  display: inline-grid; place-items: center; width: 1.2em; height: 1.55em; margin-left: .12em;
+  background: var(--accent); color: var(--on-accent); border-radius: .16em; font-weight: 400;
+  transform: rotate(6deg); box-shadow: 0 3px 0 rgb(0 0 0 / .18);
+}
+.goal { margin: 0; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.goal strong { font: 400 1.25rem var(--display); color: var(--ink); letter-spacing: 0; }
+.rules { margin: 0; color: var(--muted); font-size: .875rem; max-width: 60ch; }
+
+#msg { margin: 0; padding: .75rem 1rem; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
+#msg.win { background: var(--accent); color: var(--on-accent); border-color: transparent; font-size: 1.1rem; }
+#msg button { background: none; border: 0; padding: 0; color: inherit; font-weight: 600; text-decoration: underline; }
+
+#players { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+#players:empty::after { content: "Ajoutez au moins deux joueurs ci-dessous."; color: var(--muted); }
+.p {
+  display: grid; grid-template-columns: minmax(0, 1fr) 4.75rem 4.5rem auto; align-items: center;
+  gap: .55rem .6rem; padding: .75rem .6rem .8rem 1rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.name {
+  font: 600 1.05rem var(--body); color: inherit; background: none; width: 100%; min-width: 0;
+  border: 0; border-bottom: 1px dashed transparent; padding: .2rem 0;
+}
+.name:hover { border-bottom-color: var(--line); }
+.name:focus { outline: none; border-bottom-color: var(--accent); }
+.pts {
+  font: 600 1.1rem var(--body); font-variant-numeric: tabular-nums; text-align: right; width: 100%;
+  padding: .45rem .55rem; border: 1px solid var(--line); border-radius: 8px; background: var(--ground); color: var(--ink);
+  -moz-appearance: textfield; appearance: textfield;
+}
+.pts::-webkit-inner-spin-button, .pts::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.pts::placeholder { color: var(--muted); }
+.total { font: 400 1.45rem/1 var(--display); text-align: right; padding: .3rem .35rem; border-radius: 6px; }
+.total.lead { background: var(--accent); color: var(--on-accent); }
+.x { background: none; border: 0; color: var(--muted); min-width: 2rem; height: 2rem; border-radius: 6px; font-size: 1.2rem; }
+.x:hover { background: var(--line); }
+.x[data-armed] { color: var(--bust); font-size: .8rem; font-weight: 600; }
+.bar { grid-column: 1 / -1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--c); transition: width .4s ease; }
+
+#add { display: flex; gap: .5rem; }
+#add input { flex: 1; min-width: 0; font: inherit; padding: .6rem .75rem; border: 1px dashed var(--muted); border-radius: 10px; background: none; color: var(--ink); }
+.ghost { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 10px; padding: .6rem .9rem; }
+.ghost:hover:not(:disabled) { background: var(--surface); }
+.ghost[data-armed] { color: var(--bust); border-color: var(--bust); }
+.go {
+  font: 400 1.15rem var(--display); background: var(--accent); color: var(--on-accent); border: 0;
+  border-radius: 12px; padding: 1rem; box-shadow: 0 3px 0 rgb(0 0 0 / .2);
+}
+.go:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgb(0 0 0 / .2); }
+
+h2 { margin: .5rem 0 0; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.sheet { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: .5rem .75rem; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+th:first-child { text-align: left; color: var(--muted); font-weight: 400; }
+thead th { font-weight: 600; font-size: .875rem; }
+tbody tr:last-child > * { border-bottom: 0; }
+td.bust { color: var(--bust); }
+.foot { display: flex; flex-wrap: wrap; gap: .5rem; }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+</head>
+<body>
+<main>
+  <header>
+    <h1>Flip<b>7</b></h1>
+    <p class="goal">Premier à <strong>200</strong></p>
+  </header>
+  <p class="rules">Une manche : somme des cartes numéros (doublée par ×2), plus les bonus, +15 pour un Flip 7. Bust = 0.</p>
+  <p id="msg" hidden></p>
+  <ol id="players"></ol>
+  <form id="add"><input id="newName" placeholder="Nom du joueur" maxlength="20" aria-label="Nom du nouveau joueur"><button class="ghost">Ajouter</button></form>
+  <button class="go" id="go" data-act="round">Valider la manche</button>
+  <section id="history" hidden>
+    <h2>Manches</h2>
+    <div class="sheet"><table id="hist"></table></div>
+  </section>
+  <div class="foot">
+    <button class="ghost" id="undo" data-act="undo">Annuler la dernière manche</button>
+    <button class="ghost" data-act="reset">Nouvelle partie</button>
+  </div>
+</main>
+
+<script>
+const KEY = 'flip7-carnet', GOAL = 200;
+const COLORS = ['#E4572E', '#2E86AB', '#9B5DE5', '#3BA55C', '#E0A100', '#D63384', '#159CAD', '#7A8B8C'];
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<"]/g, c => ({ '&': '&amp;', '<': '&lt;', '"': '&quot;' })[c]);
+const draft = {};
+
+let s;
+try { s = JSON.parse(localStorage.getItem(KEY)); } catch {}
+s ||= { ex: true, next: 4,
+  players: [{ id: 1, name: 'Camille' }, { id: 2, name: 'Sam' }, { id: 3, name: 'Noor' }],
+  rounds: [{ 1: 34, 2: 0, 3: 27 }, { 1: 21, 2: 52, 3: 0 }] };
+
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} };
+const commit = () => { save(); render(); };
+const totals = () => Object.fromEntries(s.players.map(p => [p.id, s.rounds.reduce((a, r) => a + (r[p.id] || 0), 0)]));
+
+function status(players, t) {
+  const max = Math.max(0, ...players.map(p => t[p.id]));
+  const top = players.filter(p => t[p.id] === max);
+  return { max, winner: max >= GOAL && top.length === 1 ? top[0] : null, tie: max >= GOAL && top.length > 1 };
+}
+
+function render() {
+  const t = totals(), st = status(s.players, t), n = s.rounds.length + 1;
+  $('players').innerHTML = s.players.map(p => `
+    <li class="p" style="--c:${COLORS[p.id % COLORS.length]}">
+      <input class="name" data-id="${p.id}" value="${esc(p.name)}" maxlength="20" aria-label="Nom du joueur">
+      <input class="pts" data-id="${p.id}" type="number" inputmode="numeric" min="0" max="999" placeholder="+0"
+        value="${esc(draft[p.id] ?? '')}" aria-label="Points de ${esc(p.name)}, manche ${n}" ${st.winner ? 'disabled' : ''}>
+      <output class="total${st.max > 0 && t[p.id] === st.max ? ' lead' : ''}">${t[p.id]}</output>
+      <button class="x" data-act="del" data-id="${p.id}" aria-label="Retirer ${esc(p.name)}">×</button>
+      <div class="bar"><i style="width:${Math.min(t[p.id] / GOAL, 1) * 100}%"></i></div>
+    </li>`).join('');
+
+  const msg = $('msg');
+  msg.className = st.winner ? 'win' : '';
+  msg.innerHTML = s.ex ? `Partie d'exemple. <button type="button" data-act="fresh">Commencer une vraie partie</button>`
+    : st.winner ? `<span><strong>${esc(st.winner.name)}</strong> gagne avec ${st.max} points.</span>`
+    : st.tie ? `Égalité à ${st.max} points : on joue une manche de plus.` : '';
+  msg.hidden = !msg.innerHTML;
+
+  $('go').textContent = st.winner ? 'Partie terminée' : `Valider la manche ${n}`;
+  $('go').disabled = !!st.winner || !s.players.length;
+  $('undo').disabled = !s.rounds.length;
+  renderHistory();
+}
+
+function renderHistory() {
+  $('history').hidden = !s.rounds.length;
+  $('hist').innerHTML = `<thead><tr><th>Manche</th>${s.players.map(p => `<th>${esc(p.name)}</th>`).join('')}</tr></thead>
+    <tbody>${s.rounds.map((r, i) => `<tr><th>${i + 1}</th>${s.players.map(p =>
+      `<td${r[p.id] === 0 ? ' class="bust"' : ''}>${r[p.id] ?? '–'}</td>`).join('')}</tr>`).join('')}</tbody>`;
+}
+
+function scoreRound() {
+  const r = {};
+  for (const p of s.players) r[p.id] = Math.max(0, Math.round(+draft[p.id] || 0));
+  s.rounds.push(r);
+  for (const k in draft) delete draft[k];
+  commit();
+  document.querySelector('.pts:not(:disabled)')?.focus();
+}
+
+function reset(empty) {
+  s = { next: s.next, players: empty ? [] : s.players, rounds: [] };
+  for (const k in draft) delete draft[k];
+  commit();
+}
+
+// Two taps for anything that throws scores away (the viewer blocks confirm()).
+function armed(btn, label, fn) {
+  if (btn.dataset.armed) return fn();
+  const old = btn.textContent;
+  btn.dataset.armed = 1; btn.textContent = label;
+  setTimeout(() => { delete btn.dataset.armed; btn.textContent = old; }, 3000);
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const id = +b.dataset.id;
+  ({
+    round: scoreRound,
+    fresh: () => reset(true),
+    undo: () => armed(b, 'Confirmer l’annulation', () => { s.rounds.pop(); commit(); }),
+    reset: () => s.ex ? reset(true) : armed(b, 'Confirmer : tout remettre à 0', () => reset(false)),
+    del: () => armed(b, 'Retirer ?', () => { s.players = s.players.filter(p => p.id !== id); delete draft[id]; commit(); }),
+  })[b.dataset.act]();
+});
+
+$('players').addEventListener('input', e => {
+  const id = +e.target.dataset.id;
+  if (e.target.classList.contains('pts')) draft[id] = e.target.value;
+  else { s.players.find(p => p.id === id).name = e.target.value; save(); renderHistory(); }
+});
+
+// Enter walks down the score column; on the last player it validates the round.
+$('players').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const all = [...document.querySelectorAll('.pts')], i = all.indexOf(e.target);
+  if (i < 0) return e.target.blur();
+  i < all.length - 1 ? all[i + 1].focus() : scoreRound();
+});
+
+$('add').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('newName').value.trim();
+  if (!name) return;
+  s.players.push({ id: s.next++, name });
+  $('newName').value = '';
+  commit();
+});
+
+render();
+</script>
+</body>
+</html>
