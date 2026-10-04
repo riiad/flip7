@@ -121,10 +121,15 @@ dialog form { display: grid; gap: .75rem; }
 }
 .deck.mods { grid-template-columns: repeat(6, 1fr); }
 .deck.mods button { aspect-ratio: auto; padding-block: .55rem; font-size: .95rem; }
-.deck button[aria-pressed="true"] {
+.deck button[aria-pressed="true"], .deck button[data-on] {
   background: var(--accent); color: var(--on-accent); border-color: transparent;
   transform: translateY(-3px); box-shadow: 0 3px 0 rgb(0 0 0 / .2);
 }
+.deck button[data-on]:disabled { opacity: 1; }
+.dtools { display: flex; gap: .5rem; }
+.dtools button { flex: 1; padding: .55rem .6rem; font-size: .9rem; white-space: nowrap; }
+#sc[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+#calc.busted #calcSum, #calc.busted #calcLine { color: var(--bust); }
 .dfoot { display: flex; gap: .5rem; flex-wrap: wrap; }
 .dfoot .go { flex: 1; padding: .8rem 1rem; white-space: nowrap; }
 .dfoot .bust { color: var(--bust); border-color: var(--bust); }
@@ -161,9 +166,13 @@ dialog form { display: grid; gap: .75rem; }
     <div class="deck" id="nums"></div>
     <p class="lbl">Modificateurs</p>
     <div class="deck mods" id="mods"></div>
-    <p id="calcLine"></p>
+    <div class="dtools">
+      <button type="button" class="ghost" id="sc" aria-pressed="false">Seconde Chance</button>
+      <button type="button" class="ghost" id="undoCard">↶ Annuler la carte</button>
+    </div>
+    <p id="calcLine" aria-live="polite"></p>
     <div class="dfoot">
-      <button class="ghost" value="cancel">Annuler</button>
+      <button class="ghost" value="cancel">Fermer</button>
       <button class="ghost bust" value="bust">Bust</button>
       <button class="go" value="ok" id="calcOk">Mettre 0</button>
     </div>
@@ -254,14 +263,22 @@ function roundScore(nums, mods) {
 }
 
 let calcId;
-const cardKey = b => b.dataset.n != null ? +b.dataset.n : b.dataset.m === 'x2' ? 'x2' : +b.dataset.m;
+const modKey = b => b.dataset.m === 'x2' ? 'x2' : +b.dataset.m;
+const handTotal = c => c.bust ? 0 : roundScore(c.nums, c.mods);
 $('nums').innerHTML = Array.from({ length: 13 }, (_, n) => `<button type="button" data-n="${n}">${n}</button>`).join('');
 $('mods').innerHTML = [2, 4, 6, 8, 10].map(m => `<button type="button" data-m="${m}">+${m}</button>`).join('')
   + '<button type="button" data-m="x2">×2</button>';
 
+// Cards are tapped as they come out, so a number already in the hand is a duplicate.
+function drawNumber(c, n) {
+  if (!c.nums.includes(n)) c.nums.push(n);
+  else if (c.sc) { c.sc = false; c.note = `Seconde Chance utilisée sur le ${n}.`; }
+  else { c.bust = true; c.note = `Deuxième ${n} : bust, 0 point.`; }
+}
+
 function openCalc(id) {
   calcId = id;
-  picks[id] ||= { nums: new Set(), mods: new Set() };
+  picks[id] ||= { cur: { nums: [], mods: [], sc: false, bust: false, note: '' }, hist: [] };
   $('calcName').textContent = s.players.find(p => p.id === id).name;
   paintCalc();
   $('calc').returnValue = '';
@@ -269,37 +286,47 @@ function openCalc(id) {
 }
 
 function paintCalc() {
-  const { nums, mods } = picks[calcId];
+  const { cur: c, hist } = picks[calcId];
   for (const b of $('nums').children) {
-    const on = nums.has(cardKey(b));
-    b.setAttribute('aria-pressed', on);
-    b.disabled = !on && nums.size >= 7;
+    const n = +b.dataset.n, on = c.nums.includes(n);
+    b.toggleAttribute('data-on', on);
+    on ? b.setAttribute('aria-label', `${n}, déjà posé`) : b.removeAttribute('aria-label');
+    b.disabled = c.bust || c.nums.length >= 7;
   }
-  for (const b of $('mods').children) b.setAttribute('aria-pressed', mods.has(cardKey(b)));
+  for (const b of $('mods').children) { b.setAttribute('aria-pressed', c.mods.includes(modKey(b))); b.disabled = c.bust; }
+  $('sc').setAttribute('aria-pressed', c.sc);
+  $('sc').disabled = c.bust;
+  $('undoCard').disabled = !hist.length;
 
-  const n = [...nums].sort((a, b) => a - b), plus = [...mods].filter(m => m !== 'x2').sort((a, b) => a - b);
-  const total = roundScore(n, [...mods]);
+  const n = [...c.nums].sort((a, b) => a - b), plus = c.mods.filter(m => m !== 'x2').sort((a, b) => a - b);
+  const total = handTotal(c);
   let line = n.join(' + ');
-  if (mods.has('x2') && n.length) line = `(${line}) × 2`;
+  if (c.mods.includes('x2') && n.length) line = `(${line}) × 2`;
   if (plus.length) line += (line ? ' + ' : '') + plus.join(' + ');
   if (n.length === 7) line += ' + 15 Flip 7';
-  $('calcLine').textContent = line ? `${line} = ${total}` : 'Touche les cartes posées devant le joueur.';
+  $('calcLine').textContent = c.note || (line ? `${line} = ${total}` : 'Touche les cartes au fur et à mesure qu’elles sortent.');
+  $('calc').classList.toggle('busted', c.bust);
   $('calcSum').textContent = total;
   $('calcOk').textContent = `Mettre ${total}`;
 }
 
 $('calc').addEventListener('click', e => {
-  const b = e.target.closest('[data-n], [data-m]');
+  const b = e.target.closest('button[type="button"]'), p = picks[calcId];
   if (!b) return;
-  const set = b.dataset.n != null ? picks[calcId].nums : picks[calcId].mods, k = cardKey(b);
-  set.has(k) ? set.delete(k) : set.add(k);
+  if (b.id === 'undoCard') { p.cur = p.hist.pop(); return paintCalc(); }
+  p.hist.push(structuredClone(p.cur));
+  const c = p.cur;
+  c.note = '';
+  if (b.dataset.n) drawNumber(c, +b.dataset.n);
+  else if (b.id === 'sc') c.sc = !c.sc;
+  else { const m = modKey(b), i = c.mods.indexOf(m); i < 0 ? c.mods.push(m) : c.mods.splice(i, 1); }
   paintCalc();
 });
 
 $('calc').addEventListener('close', () => {
-  const v = $('calc').returnValue, p = picks[calcId];
+  const v = $('calc').returnValue;
   if (v !== 'ok' && v !== 'bust') return;
-  draft[calcId] = String(v === 'ok' ? roundScore([...p.nums], [...p.mods]) : 0);
+  draft[calcId] = String(v === 'ok' ? handTotal(picks[calcId].cur) : 0);
   if (v === 'bust') delete picks[calcId];
   document.querySelector(`.pts[data-id="${calcId}"]`).value = draft[calcId];
 });
