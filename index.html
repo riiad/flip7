@@ -50,7 +50,7 @@ h1 b {
 #players { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
 #players:empty::after { content: "Ajoutez au moins deux joueurs ci-dessous."; color: var(--muted); }
 .p {
-  display: grid; grid-template-columns: minmax(0, 1fr) 4.75rem 4.5rem auto; align-items: center;
+  display: grid; grid-template-columns: minmax(0, 1fr) 7rem 4rem auto; align-items: center;
   gap: .55rem .6rem; padding: .75rem .6rem .8rem 1rem;
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
 }
@@ -62,9 +62,17 @@ h1 b {
 .name:focus { outline: none; border-bottom-color: var(--accent); }
 .pts {
   font: 600 1.1rem var(--body); font-variant-numeric: tabular-nums; text-align: right; width: 100%;
-  padding: .45rem .55rem; border: 1px solid var(--line); border-radius: 8px; background: var(--ground); color: var(--ink);
-  -moz-appearance: textfield; appearance: textfield;
+  padding: .45rem .55rem; border: 1px solid var(--line); border-radius: 0 8px 8px 0; background: var(--ground); color: var(--ink);
+  -moz-appearance: textfield; appearance: textfield; min-width: 0;
 }
+.entry { display: flex; }
+.calc {
+  display: grid; place-items: center; flex: none; width: 2.4rem; padding: 0; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-right: 0; border-radius: 8px 0 0 8px;
+}
+.calc:hover:not(:disabled) { background: var(--accent); color: var(--on-accent); }
+.calc svg rect { fill: var(--surface); stroke: currentColor; stroke-width: 1.8; }
+.calc:hover:not(:disabled) svg rect { fill: var(--accent); }
 .pts::-webkit-inner-spin-button, .pts::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .pts::placeholder { color: var(--muted); }
 .total { font: 400 1.45rem/1 var(--display); text-align: right; padding: .3rem .35rem; border-radius: 6px; }
@@ -86,7 +94,7 @@ h1 b {
 }
 .go:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgb(0 0 0 / .2); }
 
-h2 { margin: .5rem 0 0; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+h2, .lbl { margin: .5rem 0 0; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .sheet { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
 th, td { padding: .5rem .75rem; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
@@ -95,6 +103,31 @@ thead th { font-weight: 600; font-size: .875rem; }
 tbody tr:last-child > * { border-bottom: 0; }
 td.bust { color: var(--bust); }
 .foot { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+dialog {
+  width: min(26rem, calc(100% - 32px)); box-sizing: border-box; padding: 1.25rem; border: 0; border-radius: 16px;
+  background: var(--surface); color: var(--ink); box-shadow: 0 20px 60px rgb(0 0 0 / .35);
+}
+dialog::backdrop { background: rgb(5 20 22 / .55); }
+dialog form { display: grid; gap: .75rem; }
+.dhead { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.dhead h3 { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+#calcSum { font: 400 2.2rem/1 var(--display); }
+#calcLine { margin: 0; min-height: 1.45em; color: var(--muted); font-size: .875rem; font-variant-numeric: tabular-nums; }
+.deck { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr)); gap: .4rem; }
+.deck button {
+  aspect-ratio: 5 / 7; max-width: 100%; padding: 0; font: 400 1.05rem var(--display); color: var(--ink);
+  background: var(--ground); border: 1px solid var(--line); border-radius: 7px; transition: transform .12s;
+}
+.deck.mods button { aspect-ratio: auto; padding-block: .55rem; font-size: .95rem; }
+.deck button[aria-pressed="true"] {
+  background: var(--accent); color: var(--on-accent); border-color: transparent;
+  transform: translateY(-3px); box-shadow: 0 3px 0 rgb(0 0 0 / .2);
+}
+.dfoot { display: flex; gap: .5rem; flex-wrap: wrap; }
+.dfoot .go { flex: 1; padding: .8rem 1rem; }
+.dfoot .bust { color: var(--bust); border-color: var(--bust); }
+@media (prefers-reduced-motion: reduce) { .deck button { transition: none; } }
 @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
 </style>
 
@@ -120,12 +153,30 @@ td.bust { color: var(--bust); }
   </div>
 </main>
 
+<dialog id="calc" aria-labelledby="calcName">
+  <form method="dialog">
+    <div class="dhead"><h3 id="calcName"></h3><output id="calcSum">0</output></div>
+    <p class="lbl">Cartes numéros</p>
+    <div class="deck" id="nums"></div>
+    <p class="lbl">Modificateurs</p>
+    <div class="deck mods" id="mods"></div>
+    <p id="calcLine"></p>
+    <div class="dfoot">
+      <button class="ghost" value="cancel">Annuler</button>
+      <button class="ghost bust" value="bust">Bust</button>
+      <button class="go" value="ok" id="calcOk">Mettre 0</button>
+    </div>
+  </form>
+</dialog>
+
 <script>
 const KEY = 'flip7-carnet', GOAL = 200;
 const COLORS = ['#E4572E', '#2E86AB', '#9B5DE5', '#3BA55C', '#E0A100', '#D63384', '#159CAD', '#7A8B8C'];
 const $ = id => document.getElementById(id);
 const esc = t => String(t).replace(/[&<"]/g, c => ({ '&': '&amp;', '<': '&lt;', '"': '&quot;' })[c]);
-const draft = {};
+const CARDS = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="6" width="11" height="15" rx="2" transform="rotate(-12 8.5 13.5)"/><rect x="10" y="3" width="11" height="15" rx="2"/></svg>';
+const draft = {}, picks = {};
+const clearRound = () => { for (const o of [draft, picks]) for (const k in o) delete o[k]; };
 
 let s;
 try { s = JSON.parse(localStorage.getItem(KEY)); } catch {}
@@ -148,8 +199,12 @@ function render() {
   $('players').innerHTML = s.players.map(p => `
     <li class="p" style="--c:${COLORS[p.id % COLORS.length]}">
       <input class="name" data-id="${p.id}" value="${esc(p.name)}" maxlength="20" aria-label="Nom du joueur">
-      <input class="pts" data-id="${p.id}" type="number" inputmode="numeric" min="0" max="999" placeholder="+0"
-        value="${esc(draft[p.id] ?? '')}" aria-label="Points de ${esc(p.name)}, manche ${n}" ${st.winner ? 'disabled' : ''}>
+      <div class="entry">
+        <button class="calc" data-act="calc" data-id="${p.id}" title="Compter les cartes"
+          aria-label="Compter les cartes de ${esc(p.name)}" ${st.winner ? 'disabled' : ''}>${CARDS}</button>
+        <input class="pts" data-id="${p.id}" type="number" inputmode="numeric" min="0" max="999" placeholder="+0"
+          value="${esc(draft[p.id] ?? '')}" aria-label="Points de ${esc(p.name)}, manche ${n}" ${st.winner ? 'disabled' : ''}>
+      </div>
       <output class="total${st.max > 0 && t[p.id] === st.max ? ' lead' : ''}">${t[p.id]}</output>
       <button class="x" data-act="del" data-id="${p.id}" aria-label="Retirer ${esc(p.name)}">×</button>
       <div class="bar"><i style="width:${Math.min(t[p.id] / GOAL, 1) * 100}%"></i></div>
@@ -179,16 +234,74 @@ function scoreRound() {
   const r = {};
   for (const p of s.players) r[p.id] = Math.max(0, Math.round(+draft[p.id] || 0));
   s.rounds.push(r);
-  for (const k in draft) delete draft[k];
+  clearRound();
   commit();
   document.querySelector('.pts:not(:disabled)')?.focus();
 }
 
 function reset(empty) {
   s = { next: s.next, players: empty ? [] : s.players, rounds: [] };
-  for (const k in draft) delete draft[k];
+  clearRound();
   commit();
 }
+
+// Flip 7: ×2 doubles the number cards only, then the +N modifiers, then +15 for seven number cards.
+function roundScore(nums, mods) {
+  const sum = nums.reduce((a, n) => a + n, 0);
+  const plus = mods.filter(m => m !== 'x2').reduce((a, m) => a + m, 0);
+  return sum * (mods.includes('x2') ? 2 : 1) + plus + (nums.length === 7 ? 15 : 0);
+}
+
+let calcId;
+const cardKey = b => b.dataset.n != null ? +b.dataset.n : b.dataset.m === 'x2' ? 'x2' : +b.dataset.m;
+$('nums').innerHTML = Array.from({ length: 13 }, (_, n) => `<button type="button" data-n="${n}">${n}</button>`).join('');
+$('mods').innerHTML = [2, 4, 6, 8, 10].map(m => `<button type="button" data-m="${m}">+${m}</button>`).join('')
+  + '<button type="button" data-m="x2">×2</button>';
+
+function openCalc(id) {
+  calcId = id;
+  picks[id] ||= { nums: new Set(), mods: new Set() };
+  $('calcName').textContent = s.players.find(p => p.id === id).name;
+  paintCalc();
+  $('calc').returnValue = '';
+  $('calc').showModal();
+}
+
+function paintCalc() {
+  const { nums, mods } = picks[calcId];
+  for (const b of $('nums').children) {
+    const on = nums.has(cardKey(b));
+    b.setAttribute('aria-pressed', on);
+    b.disabled = !on && nums.size >= 7;
+  }
+  for (const b of $('mods').children) b.setAttribute('aria-pressed', mods.has(cardKey(b)));
+
+  const n = [...nums].sort((a, b) => a - b), plus = [...mods].filter(m => m !== 'x2').sort((a, b) => a - b);
+  const total = roundScore(n, [...mods]);
+  let line = n.join(' + ');
+  if (mods.has('x2') && n.length) line = `(${line}) × 2`;
+  if (plus.length) line += (line ? ' + ' : '') + plus.join(' + ');
+  if (n.length === 7) line += ' + 15 Flip 7';
+  $('calcLine').textContent = line ? `${line} = ${total}` : 'Touche les cartes posées devant le joueur.';
+  $('calcSum').textContent = total;
+  $('calcOk').textContent = `Mettre ${total}`;
+}
+
+$('calc').addEventListener('click', e => {
+  const b = e.target.closest('[data-n], [data-m]');
+  if (!b) return;
+  const set = b.dataset.n != null ? picks[calcId].nums : picks[calcId].mods, k = cardKey(b);
+  set.has(k) ? set.delete(k) : set.add(k);
+  paintCalc();
+});
+
+$('calc').addEventListener('close', () => {
+  const v = $('calc').returnValue, p = picks[calcId];
+  if (v !== 'ok' && v !== 'bust') return;
+  draft[calcId] = String(v === 'ok' ? roundScore([...p.nums], [...p.mods]) : 0);
+  if (v === 'bust') delete picks[calcId];
+  document.querySelector(`.pts[data-id="${calcId}"]`).value = draft[calcId];
+});
 
 // Two taps for anything that throws scores away (the viewer blocks confirm()).
 function armed(btn, label, fn) {
@@ -204,10 +317,11 @@ document.addEventListener('click', e => {
   const id = +b.dataset.id;
   ({
     round: scoreRound,
+    calc: () => openCalc(id),
     fresh: () => reset(true),
     undo: () => armed(b, 'Confirmer l’annulation', () => { s.rounds.pop(); commit(); }),
     reset: () => s.ex ? reset(true) : armed(b, 'Confirmer : tout remettre à 0', () => reset(false)),
-    del: () => armed(b, 'Retirer ?', () => { s.players = s.players.filter(p => p.id !== id); delete draft[id]; commit(); }),
+    del: () => armed(b, 'Retirer ?', () => { s.players = s.players.filter(p => p.id !== id); delete draft[id]; delete picks[id]; commit(); }),
   })[b.dataset.act]();
 });
 
@@ -219,7 +333,7 @@ $('players').addEventListener('input', e => {
 
 // Enter walks down the score column; on the last player it validates the round.
 $('players').addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
+  if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
   e.preventDefault();
   const all = [...document.querySelectorAll('.pts')], i = all.indexOf(e.target);
   if (i < 0) return e.target.blur();
