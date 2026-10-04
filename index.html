@@ -114,18 +114,19 @@ dialog form { display: grid; gap: .75rem; }
 .dhead h3 { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
 #calcSum { font: 400 2.2rem/1 var(--display); }
 #calcLine { margin: 0; min-height: 1.45em; color: var(--muted); font-size: .875rem; font-variant-numeric: tabular-nums; }
-.deck { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr)); gap: .4rem; }
+.deck { display: grid; grid-template-columns: repeat(7, 1fr); gap: .4rem; }
 .deck button {
   aspect-ratio: 5 / 7; max-width: 100%; padding: 0; font: 400 1.05rem var(--display); color: var(--ink);
   background: var(--ground); border: 1px solid var(--line); border-radius: 7px; transition: transform .12s;
 }
+.deck.mods { grid-template-columns: repeat(6, 1fr); }
 .deck.mods button { aspect-ratio: auto; padding-block: .55rem; font-size: .95rem; }
 .deck button[aria-pressed="true"] {
   background: var(--accent); color: var(--on-accent); border-color: transparent;
   transform: translateY(-3px); box-shadow: 0 3px 0 rgb(0 0 0 / .2);
 }
 .dfoot { display: flex; gap: .5rem; flex-wrap: wrap; }
-.dfoot .go { flex: 1; padding: .8rem 1rem; }
+.dfoot .go { flex: 1; padding: .8rem 1rem; white-space: nowrap; }
 .dfoot .bust { color: var(--bust); border-color: var(--bust); }
 @media (prefers-reduced-motion: reduce) { .deck button { transition: none; } }
 @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
