@@ -125,7 +125,7 @@ dialog form { display: grid; gap: .75rem; }
   background: var(--accent); color: var(--on-accent); border-color: transparent;
   transform: translateY(-3px); box-shadow: 0 3px 0 rgb(0 0 0 / .2);
 }
-.deck button[data-on]:disabled { opacity: 1; }
+.deck button[data-on]:disabled, .deck button[aria-pressed="true"]:disabled { opacity: 1; }
 .dtools { display: flex; gap: .5rem; }
 .dtools button { flex: 1; padding: .55rem .6rem; font-size: .9rem; white-space: nowrap; }
 #sc[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
@@ -168,7 +168,7 @@ dialog form { display: grid; gap: .75rem; }
     <div class="deck mods" id="mods"></div>
     <div class="dtools">
       <button type="button" class="ghost" id="sc" aria-pressed="false">Seconde Chance</button>
-      <button type="button" class="ghost" id="undoCard">↶ Annuler la carte</button>
+      <button type="button" class="ghost" id="undoCard">Annuler la carte</button>
     </div>
     <p id="calcLine" aria-live="polite"></p>
     <div class="dfoot">
