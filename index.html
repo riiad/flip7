@@ -2,14 +2,14 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>:root { color-scheme: light; } body { margin: 0; } [hidden] { display: none !important; }</style>
 <title>Carnet Flip 7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=DM+Sans:opsz,wght@9..40,400;9..40,600&display=swap">
 <style>
-/* Layout: one narrow column, one card per player at the table, the round sheet underneath */
+/* Layout: players at the table on top, the deck always open at the bottom of the screen */
 :root {
   --ground: #EAF2F0; --surface: #FFFFFF; --ink: #10292D; --muted: #56706F; --line: #D2E0DC;
   --accent: #F4B000; --on-accent: #231A00; --bust: #C8412F;
@@ -27,13 +27,13 @@
   --accent: #FFC233; --bust: #F2705F; color-scheme: dark;
 }
 body { background: var(--ground); color: var(--ink); font: 16px/1.45 var(--body); padding-inline: 16px; }
-main { max-width: 34rem; margin: 0 auto; padding-block: 2rem 3rem; display: grid; gap: 1.25rem; }
-button { font: inherit; cursor: pointer; }
+main { max-width: 34rem; margin: 0 auto; padding-block: 1.5rem 3rem; display: grid; gap: 1rem; }
+button { font: inherit; cursor: pointer; color: inherit; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button:disabled { opacity: .4; cursor: default; }
 
 header { display: flex; align-items: end; justify-content: space-between; gap: .5rem 1rem; flex-wrap: wrap; }
-h1 { font: 400 2.4rem/1 var(--display); margin: 0; }
+h1 { font: 400 2.2rem/1 var(--display); margin: 0; }
 h1 b {
   display: inline-grid; place-items: center; width: 1.2em; height: 1.55em; margin-left: .12em;
   background: var(--accent); color: var(--on-accent); border-radius: .16em; font-weight: 400;
@@ -45,56 +45,75 @@ h1 b {
 
 #msg { margin: 0; padding: .75rem 1rem; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
 #msg.win { background: var(--accent); color: var(--on-accent); border-color: transparent; font-size: 1.1rem; }
-#msg button { background: none; border: 0; padding: 0; color: inherit; font-weight: 600; text-decoration: underline; }
+#msg button { background: none; border: 0; padding: 0; font-weight: 600; text-decoration: underline; }
 
-#players { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+#players { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
 #players:empty::after { content: "Ajoutez au moins deux joueurs ci-dessous."; color: var(--muted); }
 .p {
-  display: grid; grid-template-columns: minmax(0, 1fr) 7rem 4rem auto; align-items: center;
-  gap: .55rem .6rem; padding: .75rem .6rem .8rem 1rem;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto 3.75rem auto; align-items: center;
+  gap: .4rem .6rem; padding: .6rem .5rem .7rem .9rem; cursor: pointer;
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
 }
-.name {
-  font: 600 1.05rem var(--body); color: inherit; background: none; width: 100%; min-width: 0;
-  border: 0; border-bottom: 1px dashed transparent; padding: .2rem 0;
+.p.sel { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.pick { display: grid; gap: .3rem; justify-items: start; text-align: left; background: none; border: 0; padding: 0; min-width: 0; }
+.nm { font-weight: 600; font-size: 1.05rem; overflow-wrap: anywhere; }
+.hand { display: flex; flex-wrap: wrap; gap: 3px; min-height: 1.35rem; }
+.hand i {
+  font: normal 400 .72rem/1 var(--display); padding: .25rem .32rem; border-radius: 4px;
+  background: var(--ground); border: 1px solid var(--line);
 }
-.name:hover { border-bottom-color: var(--line); }
-.name:focus { outline: none; border-bottom-color: var(--accent); }
-.pts {
-  font: 600 1.1rem var(--body); font-variant-numeric: tabular-nums; text-align: right; width: 100%;
-  padding: .45rem .55rem; border: 1px solid var(--line); border-radius: 0 8px 8px 0; background: var(--ground); color: var(--ink);
-  -moz-appearance: textfield; appearance: textfield; min-width: 0;
-}
-.entry { display: flex; }
-.calc {
-  display: grid; place-items: center; flex: none; width: 2.4rem; padding: 0; color: var(--ink);
-  background: var(--surface); border: 1px solid var(--line); border-right: 0; border-radius: 8px 0 0 8px;
-}
-.calc:hover:not(:disabled) { background: var(--accent); color: var(--on-accent); }
-.calc svg rect { fill: var(--surface); stroke: currentColor; stroke-width: 1.8; }
-.calc:hover:not(:disabled) svg rect { fill: var(--accent); }
-.pts::-webkit-inner-spin-button, .pts::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.pts::placeholder { color: var(--muted); }
-.total { font: 400 1.45rem/1 var(--display); text-align: right; padding: .3rem .35rem; border-radius: 6px; }
+.hand i.m { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.hand:empty::after { content: "Aucune carte"; font-size: .8rem; color: var(--muted); }
+.p.busted .hand i { text-decoration: line-through; opacity: .55; }
+.live { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.live.bust { color: var(--bust); }
+.total { font: 400 1.4rem/1 var(--display); text-align: right; padding: .3rem .35rem; border-radius: 6px; }
 .total.lead { background: var(--accent); color: var(--on-accent); }
 .x { background: none; border: 0; color: var(--muted); min-width: 2rem; height: 2rem; border-radius: 6px; font-size: 1.2rem; }
 .x:hover { background: var(--line); }
 .x[data-armed] { color: var(--bust); font-size: .8rem; font-weight: 600; }
-.bar { grid-column: 1 / -1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar { grid-column: 1 / -1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--c); transition: width .4s ease; }
 
 #add { display: flex; gap: .5rem; }
 #add input { flex: 1; min-width: 0; font: inherit; padding: .6rem .75rem; border: 1px dashed var(--muted); border-radius: 10px; background: none; color: var(--ink); }
-.ghost { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 10px; padding: .6rem .9rem; }
+.ghost { background: none; border: 1px solid var(--line); border-radius: 10px; padding: .6rem .9rem; }
 .ghost:hover:not(:disabled) { background: var(--surface); }
 .ghost[data-armed] { color: var(--bust); border-color: var(--bust); }
 .go {
-  font: 400 1.15rem var(--display); background: var(--accent); color: var(--on-accent); border: 0;
-  border-radius: 12px; padding: 1rem; box-shadow: 0 3px 0 rgb(0 0 0 / .2);
+  font: 400 1.1rem var(--display); background: var(--accent); color: var(--on-accent); border: 0;
+  border-radius: 12px; padding: .85rem 1rem; box-shadow: 0 3px 0 rgb(0 0 0 / .2);
 }
 .go:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgb(0 0 0 / .2); }
 
-h2, .lbl { margin: .5rem 0 0; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+#pad {
+  position: sticky; bottom: 0; z-index: 1; display: grid; gap: .5rem; margin-inline: -16px;
+  padding: .75rem 16px calc(.75rem + env(safe-area-inset-bottom, 0px));
+  background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -10px 30px rgb(0 0 0 / .12);
+}
+@media (min-width: 36rem) { #pad { margin-inline: 0; border: 1px solid var(--line); border-radius: 16px; } }
+.padhead { margin: 0; display: flex; justify-content: space-between; gap: .5rem 1rem; flex-wrap: wrap; font-size: .9rem; }
+#padNote { color: var(--muted); }
+#padNote.bad { color: var(--bust); font-weight: 600; }
+.deck { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; }
+.deck button {
+  height: 2.7rem; padding: 0; font: 400 1.05rem var(--display);
+  background: var(--ground); border: 1px solid var(--line); border-radius: 7px; transition: transform .12s;
+}
+.deck.mods { grid-template-columns: repeat(6, 1fr); }
+.deck.mods button { height: 2.3rem; font-size: .9rem; }
+.deck button[aria-pressed="true"], .deck button[data-on] {
+  background: var(--accent); color: var(--on-accent); border-color: transparent;
+  transform: translateY(-2px); box-shadow: 0 2px 0 rgb(0 0 0 / .2);
+}
+.deck button[data-on]:disabled, .deck button[aria-pressed="true"]:disabled { opacity: 1; }
+.tools { display: flex; gap: .4rem; }
+.tools button { flex: 1; padding: .5rem .4rem; font-size: .85rem; line-height: 1.15; }
+#sc[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+#bust { color: var(--bust); border-color: var(--bust); }
+#bust[aria-pressed="true"] { background: var(--bust); color: var(--surface); }
+
+h2 { margin: .5rem 0 0; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .sheet { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
 th, td { padding: .5rem .75rem; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
@@ -103,40 +122,8 @@ thead th { font-weight: 600; font-size: .875rem; }
 tbody tr:last-child > * { border-bottom: 0; }
 td.bust { color: var(--bust); }
 .foot { display: flex; flex-wrap: wrap; gap: .5rem; }
-
-dialog {
-  width: min(26rem, calc(100% - 32px)); box-sizing: border-box; padding: 1.25rem; border: 0; border-radius: 16px;
-  background: var(--surface); color: var(--ink); box-shadow: 0 20px 60px rgb(0 0 0 / .35);
-}
-dialog::backdrop { background: rgb(5 20 22 / .55); }
-dialog form { display: grid; gap: .75rem; }
-.dhead { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
-.dhead h3 { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
-#calcSum { font: 400 2.2rem/1 var(--display); }
-#calcLine { margin: 0; min-height: 1.45em; color: var(--muted); font-size: .875rem; font-variant-numeric: tabular-nums; }
-.deck { display: grid; grid-template-columns: repeat(7, 1fr); gap: .4rem; }
-.deck button {
-  aspect-ratio: 5 / 7; max-width: 100%; padding: 0; font: 400 1.05rem var(--display); color: var(--ink);
-  background: var(--ground); border: 1px solid var(--line); border-radius: 7px; transition: transform .12s;
-}
-.deck.mods { grid-template-columns: repeat(6, 1fr); }
-.deck.mods button { aspect-ratio: auto; padding-block: .55rem; font-size: .95rem; }
-.deck button[aria-pressed="true"], .deck button[data-on] {
-  background: var(--accent); color: var(--on-accent); border-color: transparent;
-  transform: translateY(-3px); box-shadow: 0 3px 0 rgb(0 0 0 / .2);
-}
-.deck button[data-on]:disabled, .deck button[aria-pressed="true"]:disabled { opacity: 1; }
-.dtools { display: flex; gap: .5rem; }
-.dtools button { flex: 1; padding: .55rem .6rem; font-size: .9rem; white-space: nowrap; }
-#sc[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
-#calc.busted #calcSum, #calc.busted #calcLine { color: var(--bust); }
-.dfoot { display: flex; gap: .5rem; flex-wrap: wrap; }
-.dfoot .go { flex: 1; padding: .8rem 1rem; white-space: nowrap; }
-.dfoot .bust { color: var(--bust); border-color: var(--bust); }
-@media (prefers-reduced-motion: reduce) { .deck button { transition: none; } }
-@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .bar i, .deck button { transition: none; } }
 </style>
-
 </head>
 <body>
 <main>
@@ -144,11 +131,23 @@ dialog form { display: grid; gap: .75rem; }
     <h1>Flip<b>7</b></h1>
     <p class="goal">Premier à <strong>200</strong></p>
   </header>
-  <p class="rules">Une manche : somme des cartes numéros (doublée par ×2), plus les bonus, +15 pour un Flip 7. Bust = 0.</p>
+  <p class="rules">Touche un joueur, puis ses cartes. ×2 double les cartes numéros, 7 cartes numéros = +15, un doublon = bust.</p>
   <p id="msg" hidden></p>
   <ol id="players"></ol>
   <form id="add"><input id="newName" placeholder="Nom du joueur" maxlength="20" aria-label="Nom du nouveau joueur"><button class="ghost">Ajouter</button></form>
-  <button class="go" id="go" data-act="round">Valider la manche</button>
+
+  <section id="pad" aria-label="Cartes">
+    <p class="padhead"><span>Cartes de <strong id="padWho"></strong></span><span id="padNote" aria-live="polite"></span></p>
+    <div class="deck" id="nums"></div>
+    <div class="deck mods" id="mods"></div>
+    <div class="tools">
+      <button type="button" class="ghost" id="sc" data-act="sc" aria-pressed="false">Seconde Chance</button>
+      <button type="button" class="ghost" id="bust" data-act="bust" aria-pressed="false">Bust</button>
+      <button type="button" class="ghost" id="undoCard" data-act="undoCard">Annuler la carte</button>
+    </div>
+    <button class="go" id="go" data-act="round">Valider la manche</button>
+  </section>
+
   <section id="history" hidden>
     <h2>Manches</h2>
     <div class="sheet"><table id="hist"></table></div>
@@ -159,40 +158,23 @@ dialog form { display: grid; gap: .75rem; }
   </div>
 </main>
 
-<dialog id="calc" aria-labelledby="calcName">
-  <form method="dialog">
-    <div class="dhead"><h3 id="calcName"></h3><output id="calcSum">0</output></div>
-    <p class="lbl">Cartes numéros</p>
-    <div class="deck" id="nums"></div>
-    <p class="lbl">Modificateurs</p>
-    <div class="deck mods" id="mods"></div>
-    <div class="dtools">
-      <button type="button" class="ghost" id="sc" aria-pressed="false">Seconde Chance</button>
-      <button type="button" class="ghost" id="undoCard">Annuler la carte</button>
-    </div>
-    <p id="calcLine" aria-live="polite"></p>
-    <div class="dfoot">
-      <button class="ghost" value="cancel">Fermer</button>
-      <button class="ghost bust" value="bust">Bust</button>
-      <button class="go" value="ok" id="calcOk">Mettre 0</button>
-    </div>
-  </form>
-</dialog>
-
 <script>
 const KEY = 'flip7-carnet', GOAL = 200;
 const COLORS = ['#E4572E', '#2E86AB', '#9B5DE5', '#3BA55C', '#E0A100', '#D63384', '#159CAD', '#7A8B8C'];
 const $ = id => document.getElementById(id);
 const esc = t => String(t).replace(/[&<"]/g, c => ({ '&': '&amp;', '<': '&lt;', '"': '&quot;' })[c]);
-const CARDS = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="6" width="11" height="15" rx="2" transform="rotate(-12 8.5 13.5)"/><rect x="10" y="3" width="11" height="15" rx="2"/></svg>';
-const draft = {}, picks = {};
-const clearRound = () => { for (const o of [draft, picks]) for (const k in o) delete o[k]; };
+const empty = () => ({ nums: [], mods: [], sc: false, bust: false });
 
 let s;
 try { s = JSON.parse(localStorage.getItem(KEY)); } catch {}
 s ||= { ex: true, next: 4,
   players: [{ id: 1, name: 'Camille' }, { id: 2, name: 'Sam' }, { id: 3, name: 'Noor' }],
-  rounds: [{ 1: 34, 2: 0, 3: 27 }, { 1: 21, 2: 52, 3: 0 }] };
+  rounds: [{ 1: 34, 2: 0, 3: 27 }, { 1: 21, 2: 52, 3: 0 }],
+  hand: { 1: { nums: [2, 5, 9], mods: [4], sc: false, bust: false }, 2: { nums: [6, 11], mods: [], sc: true, bust: false } } };
+s.hand ||= {};
+
+let sel = s.players.find(p => !s.hand[p.id])?.id ?? s.players[0]?.id, note = '';
+const hist = []; // card taps this round, for "Annuler la carte"
 
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} };
 const commit = () => { save(); render(); };
@@ -204,21 +186,43 @@ function status(players, t) {
   return { max, winner: max >= GOAL && top.length === 1 ? top[0] : null, tie: max >= GOAL && top.length > 1 };
 }
 
+// Flip 7: ×2 doubles the number cards only, then the +N modifiers, then +15 for seven number cards.
+function roundScore(nums, mods) {
+  const sum = nums.reduce((a, n) => a + n, 0);
+  const plus = mods.filter(m => m !== 'x2').reduce((a, m) => a + m, 0);
+  return sum * (mods.includes('x2') ? 2 : 1) + plus + (nums.length === 7 ? 15 : 0);
+}
+const handTotal = h => h.bust ? 0 : roundScore(h.nums, h.mods);
+
+// A number already in the hand is a duplicate: the Second Chance absorbs it, otherwise bust.
+function drawNumber(h, n) {
+  if (!h.nums.includes(n)) h.nums.push(n);
+  else if (h.sc) { h.sc = false; return `Seconde Chance utilisée sur le ${n}.`; }
+  else { h.bust = true; return `Deuxième ${n} : bust.`; }
+  return '';
+}
+
+const chips = h => [
+  ...[...h.nums].sort((a, b) => a - b).map(n => `<i>${n}</i>`),
+  ...[...h.mods].sort((a, b) => (a === 'x2') - (b === 'x2') || a - b).map(m => `<i class="m">${m === 'x2' ? '×2' : '+' + m}</i>`),
+  h.sc ? '<i class="m">2de chance</i>' : '',
+].join('');
+
 function render() {
   const t = totals(), st = status(s.players, t), n = s.rounds.length + 1;
-  $('players').innerHTML = s.players.map(p => `
-    <li class="p" style="--c:${COLORS[p.id % COLORS.length]}">
-      <input class="name" data-id="${p.id}" value="${esc(p.name)}" maxlength="20" aria-label="Nom du joueur">
-      <div class="entry">
-        <button class="calc" data-act="calc" data-id="${p.id}" title="Compter les cartes"
-          aria-label="Compter les cartes de ${esc(p.name)}" ${st.winner ? 'disabled' : ''}>${CARDS}</button>
-        <input class="pts" data-id="${p.id}" type="number" inputmode="numeric" min="0" max="999" placeholder="+0"
-          value="${esc(draft[p.id] ?? '')}" aria-label="Points de ${esc(p.name)}, manche ${n}" ${st.winner ? 'disabled' : ''}>
-      </div>
+  $('players').innerHTML = s.players.map(p => {
+    const h = s.hand[p.id] || empty(), live = handTotal(h);
+    return `
+    <li class="p${p.id === sel ? ' sel' : ''}${h.bust ? ' busted' : ''}" data-id="${p.id}" style="--c:${COLORS[p.id % COLORS.length]}">
+      <button class="pick" data-act="pick" data-id="${p.id}" aria-pressed="${p.id === sel}">
+        <span class="nm">${esc(p.name)}</span><span class="hand">${chips(h)}</span>
+      </button>
+      <span class="live${h.bust ? ' bust' : ''}">${h.bust ? 'Bust' : live ? '+' + live : ''}</span>
       <output class="total${st.max > 0 && t[p.id] === st.max ? ' lead' : ''}">${t[p.id]}</output>
       <button class="x" data-act="del" data-id="${p.id}" aria-label="Retirer ${esc(p.name)}">×</button>
       <div class="bar"><i style="width:${Math.min(t[p.id] / GOAL, 1) * 100}%"></i></div>
-    </li>`).join('');
+    </li>`;
+  }).join('');
 
   const msg = $('msg');
   msg.className = st.winner ? 'win' : '';
@@ -227,109 +231,64 @@ function render() {
     : st.tie ? `Égalité à ${st.max} points : on joue une manche de plus.` : '';
   msg.hidden = !msg.innerHTML;
 
-  $('go').textContent = st.winner ? 'Partie terminée' : `Valider la manche ${n}`;
-  $('go').disabled = !!st.winner || !s.players.length;
+  const p = s.players.find(p => p.id === sel), h = s.hand[sel] || empty();
+  $('pad').hidden = !p || !!st.winner;
+  if (p) {
+    $('padWho').textContent = p.name;
+    $('padNote').textContent = note || (h.bust ? 'Bust : 0 point' : h.nums.length === 7 ? 'Flip 7 : +15' : '');
+    $('padNote').className = h.bust ? 'bad' : '';
+    for (const b of $('nums').children) {
+      const k = +b.dataset.n, on = h.nums.includes(k);
+      b.toggleAttribute('data-on', on);
+      b.setAttribute('aria-label', on ? `${k}, déjà dans la main` : k);
+      b.disabled = h.bust || h.nums.length >= 7;
+    }
+    for (const b of $('mods').children) { b.setAttribute('aria-pressed', h.mods.includes(modKey(b))); b.disabled = h.bust; }
+    $('sc').setAttribute('aria-pressed', h.sc);
+    $('sc').disabled = h.bust;
+    $('bust').setAttribute('aria-pressed', h.bust);
+    $('undoCard').disabled = !hist.length;
+    $('go').textContent = `Valider la manche ${n}`;
+  }
   $('undo').disabled = !s.rounds.length;
-  renderHistory();
-}
 
-function renderHistory() {
   $('history').hidden = !s.rounds.length;
   $('hist').innerHTML = `<thead><tr><th>Manche</th>${s.players.map(p => `<th>${esc(p.name)}</th>`).join('')}</tr></thead>
     <tbody>${s.rounds.map((r, i) => `<tr><th>${i + 1}</th>${s.players.map(p =>
       `<td${r[p.id] === 0 ? ' class="bust"' : ''}>${r[p.id] ?? '–'}</td>`).join('')}</tr>`).join('')}</tbody>`;
 }
 
+const modKey = b => b.dataset.m === 'x2' ? 'x2' : +b.dataset.m;
+$('nums').innerHTML = Array.from({ length: 13 }, (_, n) => `<button type="button" data-act="num" data-n="${n}">${n}</button>`).join('');
+$('mods').innerHTML = [2, 4, 6, 8, 10].map(m => `<button type="button" data-act="mod" data-m="${m}">+${m}</button>`).join('')
+  + '<button type="button" data-act="mod" data-m="x2">×2</button>';
+
+// Every tap on the deck changes the selected player's hand and can be undone.
+function play(fn) {
+  if (sel == null) return;
+  s.hand[sel] ||= empty();
+  hist.push({ id: sel, h: structuredClone(s.hand[sel]) });
+  note = fn(s.hand[sel]) || '';
+  commit();
+}
+
 function scoreRound() {
   const r = {};
-  for (const p of s.players) r[p.id] = Math.max(0, Math.round(+draft[p.id] || 0));
+  for (const p of s.players) r[p.id] = s.hand[p.id] ? handTotal(s.hand[p.id]) : 0;
   s.rounds.push(r);
-  clearRound();
+  newRound();
+}
+
+function newRound() {
+  s.hand = {}; hist.length = 0; note = ''; sel = s.players[0]?.id;
   commit();
-  document.querySelector('.pts:not(:disabled)')?.focus();
+  scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function reset(empty) {
-  s = { next: s.next, players: empty ? [] : s.players, rounds: [] };
-  clearRound();
-  commit();
+function reset(clear) {
+  s = { next: s.next, players: clear ? [] : s.players, rounds: [], hand: {} };
+  newRound();
 }
-
-// Flip 7: ×2 doubles the number cards only, then the +N modifiers, then +15 for seven number cards.
-function roundScore(nums, mods) {
-  const sum = nums.reduce((a, n) => a + n, 0);
-  const plus = mods.filter(m => m !== 'x2').reduce((a, m) => a + m, 0);
-  return sum * (mods.includes('x2') ? 2 : 1) + plus + (nums.length === 7 ? 15 : 0);
-}
-
-let calcId;
-const modKey = b => b.dataset.m === 'x2' ? 'x2' : +b.dataset.m;
-const handTotal = c => c.bust ? 0 : roundScore(c.nums, c.mods);
-$('nums').innerHTML = Array.from({ length: 13 }, (_, n) => `<button type="button" data-n="${n}">${n}</button>`).join('');
-$('mods').innerHTML = [2, 4, 6, 8, 10].map(m => `<button type="button" data-m="${m}">+${m}</button>`).join('')
-  + '<button type="button" data-m="x2">×2</button>';
-
-// Cards are tapped as they come out, so a number already in the hand is a duplicate.
-function drawNumber(c, n) {
-  if (!c.nums.includes(n)) c.nums.push(n);
-  else if (c.sc) { c.sc = false; c.note = `Seconde Chance utilisée sur le ${n}.`; }
-  else { c.bust = true; c.note = `Deuxième ${n} : bust, 0 point.`; }
-}
-
-function openCalc(id) {
-  calcId = id;
-  picks[id] ||= { cur: { nums: [], mods: [], sc: false, bust: false, note: '' }, hist: [] };
-  $('calcName').textContent = s.players.find(p => p.id === id).name;
-  paintCalc();
-  $('calc').returnValue = '';
-  $('calc').showModal();
-}
-
-function paintCalc() {
-  const { cur: c, hist } = picks[calcId];
-  for (const b of $('nums').children) {
-    const n = +b.dataset.n, on = c.nums.includes(n);
-    b.toggleAttribute('data-on', on);
-    on ? b.setAttribute('aria-label', `${n}, déjà posé`) : b.removeAttribute('aria-label');
-    b.disabled = c.bust || c.nums.length >= 7;
-  }
-  for (const b of $('mods').children) { b.setAttribute('aria-pressed', c.mods.includes(modKey(b))); b.disabled = c.bust; }
-  $('sc').setAttribute('aria-pressed', c.sc);
-  $('sc').disabled = c.bust;
-  $('undoCard').disabled = !hist.length;
-
-  const n = [...c.nums].sort((a, b) => a - b), plus = c.mods.filter(m => m !== 'x2').sort((a, b) => a - b);
-  const total = handTotal(c);
-  let line = n.join(' + ');
-  if (c.mods.includes('x2') && n.length) line = `(${line}) × 2`;
-  if (plus.length) line += (line ? ' + ' : '') + plus.join(' + ');
-  if (n.length === 7) line += ' + 15 Flip 7';
-  $('calcLine').textContent = c.note || (line ? `${line} = ${total}` : 'Touche les cartes au fur et à mesure qu’elles sortent.');
-  $('calc').classList.toggle('busted', c.bust);
-  $('calcSum').textContent = total;
-  $('calcOk').textContent = `Mettre ${total}`;
-}
-
-$('calc').addEventListener('click', e => {
-  const b = e.target.closest('button[type="button"]'), p = picks[calcId];
-  if (!b) return;
-  if (b.id === 'undoCard') { p.cur = p.hist.pop(); return paintCalc(); }
-  p.hist.push(structuredClone(p.cur));
-  const c = p.cur;
-  c.note = '';
-  if (b.dataset.n) drawNumber(c, +b.dataset.n);
-  else if (b.id === 'sc') c.sc = !c.sc;
-  else { const m = modKey(b), i = c.mods.indexOf(m); i < 0 ? c.mods.push(m) : c.mods.splice(i, 1); }
-  paintCalc();
-});
-
-$('calc').addEventListener('close', () => {
-  const v = $('calc').returnValue;
-  if (v !== 'ok' && v !== 'bust') return;
-  draft[calcId] = String(v === 'ok' ? handTotal(picks[calcId].cur) : 0);
-  if (v === 'bust') delete picks[calcId];
-  document.querySelector(`.pts[data-id="${calcId}"]`).value = draft[calcId];
-});
 
 // Two taps for anything that throws scores away (the viewer blocks confirm()).
 function armed(btn, label, fn) {
@@ -341,31 +300,26 @@ function armed(btn, label, fn) {
 
 document.addEventListener('click', e => {
   const b = e.target.closest('button[data-act]');
-  if (!b) return;
+  const row = e.target.closest('.p');
+  if (!b) { if (row) { sel = +row.dataset.id; note = ''; render(); } return; }
   const id = +b.dataset.id;
   ({
+    pick: () => { sel = id; note = ''; render(); },
+    num: () => play(h => drawNumber(h, +b.dataset.n)),
+    mod: () => play(h => { const m = modKey(b), i = h.mods.indexOf(m); i < 0 ? h.mods.push(m) : h.mods.splice(i, 1); }),
+    sc: () => play(h => { h.sc = !h.sc; }),
+    bust: () => play(h => { h.bust = !h.bust; }),
+    undoCard: () => { const u = hist.pop(); s.hand[u.id] = u.h; sel = u.id; note = ''; commit(); },
     round: scoreRound,
-    calc: () => openCalc(id),
     fresh: () => reset(true),
     undo: () => armed(b, 'Confirmer l’annulation', () => { s.rounds.pop(); commit(); }),
     reset: () => s.ex ? reset(true) : armed(b, 'Confirmer : tout remettre à 0', () => reset(false)),
-    del: () => armed(b, 'Retirer ?', () => { s.players = s.players.filter(p => p.id !== id); delete draft[id]; delete picks[id]; commit(); }),
+    del: () => armed(b, 'Retirer ?', () => {
+      s.players = s.players.filter(p => p.id !== id); delete s.hand[id];
+      if (sel === id) sel = s.players[0]?.id;
+      commit();
+    }),
   })[b.dataset.act]();
-});
-
-$('players').addEventListener('input', e => {
-  const id = +e.target.dataset.id;
-  if (e.target.classList.contains('pts')) draft[id] = e.target.value;
-  else { s.players.find(p => p.id === id).name = e.target.value; save(); renderHistory(); }
-});
-
-// Enter walks down the score column; on the last player it validates the round.
-$('players').addEventListener('keydown', e => {
-  if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
-  e.preventDefault();
-  const all = [...document.querySelectorAll('.pts')], i = all.indexOf(e.target);
-  if (i < 0) return e.target.blur();
-  i < all.length - 1 ? all[i + 1].focus() : scoreRound();
 });
 
 $('add').addEventListener('submit', e => {
@@ -373,6 +327,7 @@ $('add').addEventListener('submit', e => {
   const name = $('newName').value.trim();
   if (!name) return;
   s.players.push({ id: s.next++, name });
+  sel ??= s.players.at(-1).id;
   $('newName').value = '';
   commit();
 });
