@@ -113,6 +113,13 @@ h1 b {
 }
 .deck button[data-on]:disabled, .deck button[aria-pressed="true"]:disabled { opacity: 1; }
 .tools { display: flex; gap: .4rem; }
+.tools input {
+  width: 4.5rem; flex: none; box-sizing: border-box; padding: .4rem; text-align: right; border: 1px solid var(--line); border-radius: 10px;
+  font: 600 1rem var(--body); font-variant-numeric: tabular-nums; background: var(--ground); color: var(--ink);
+  -moz-appearance: textfield; appearance: textfield;
+}
+.tools input::-webkit-inner-spin-button, .tools input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.tools input::placeholder { color: var(--muted); font-weight: 400; font-size: .85rem; }
 .tools button { flex: 1; padding: .5rem .4rem; font-size: .85rem; line-height: 1.15; }
 #sc[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 #bust { color: var(--bust); border-color: var(--bust); }
@@ -136,7 +143,7 @@ td.bust { color: var(--bust); }
     <h1>Flip<b>7</b></h1>
     <p class="goal">Premier à <strong>200</strong></p>
   </header>
-  <p class="rules">Touche un joueur, puis ses cartes. Son nom se modifie au-dessus des cartes. ×2 double les cartes numéros, 7 cartes numéros = +15, un doublon = bust.</p>
+  <p class="rules">Touche un joueur, puis ses cartes. Son nom se modifie au-dessus des cartes, son score peut aussi se taper à la main. ×2 double les cartes numéros, 7 cartes numéros = +15, un doublon = bust.</p>
   <p id="msg" hidden></p>
   <ol id="players"></ol>
   <form id="add"><input id="newName" placeholder="Nom du joueur" maxlength="20" aria-label="Nom du nouveau joueur"><button class="ghost">Ajouter</button></form>
@@ -149,6 +156,7 @@ td.bust { color: var(--bust); }
       <button type="button" class="ghost" id="sc" data-act="sc" aria-pressed="false">Seconde Chance</button>
       <button type="button" class="ghost" id="bust" data-act="bust" aria-pressed="false">Bust</button>
       <button type="button" class="ghost" id="undoCard" data-act="undoCard">Annuler la carte</button>
+      <input id="manual" type="number" inputmode="numeric" min="0" max="999" placeholder="Score" aria-label="Saisir le score à la main">
     </div>
     <button class="go" id="go" data-act="round">Valider la manche</button>
   </section>
@@ -197,7 +205,7 @@ function roundScore(nums, mods) {
   const plus = mods.filter(m => m !== 'x2').reduce((a, m) => a + m, 0);
   return sum * (mods.includes('x2') ? 2 : 1) + plus + (nums.length === 7 ? 15 : 0);
 }
-const handTotal = h => h.bust ? 0 : roundScore(h.nums, h.mods);
+const handTotal = h => h.manual ?? (h.bust ? 0 : roundScore(h.nums, h.mods));
 
 // A number already in the hand is a duplicate: the Second Chance absorbs it, otherwise bust.
 function drawNumber(h, n) {
@@ -207,7 +215,7 @@ function drawNumber(h, n) {
   return '';
 }
 
-const chips = h => [
+const chips = h => h.manual != null ? '<i class="m">score saisi</i>' : [
   ...[...h.nums].sort((a, b) => a - b).map(n => `<i>${n}</i>`),
   ...[...h.mods].sort((a, b) => (a === 'x2') - (b === 'x2') || a - b).map(m => `<i class="m">${m === 'x2' ? '×2' : '+' + m}</i>`),
   h.sc ? '<i class="m">2de chance</i>' : '',
@@ -253,6 +261,7 @@ function render() {
     $('sc').disabled = h.bust;
     $('bust').setAttribute('aria-pressed', h.bust);
     $('undoCard').disabled = !hist.length;
+    if (document.activeElement !== $('manual')) $('manual').value = h.manual ?? '';
     $('go').textContent = `Valider la manche ${n}`;
   }
   $('undo').disabled = !s.rounds.length;
@@ -273,6 +282,7 @@ function play(fn) {
   if (sel == null) return;
   s.hand[sel] ||= empty();
   hist.push({ id: sel, h: structuredClone(s.hand[sel]) });
+  if (s.hand[sel].manual != null) s.hand[sel] = empty();
   note = fn(s.hand[sel]) || '';
   commit();
 }
@@ -332,6 +342,16 @@ $('padWho').addEventListener('input', e => {
   s.players.find(p => p.id === sel).name = e.target.value.trim() || 'Joueur';
   commit();
 });
+// A typed score replaces the cards; tapping a card afterwards goes back to counting cards.
+$('manual').addEventListener('change', e => {
+  const v = e.target.value.trim();
+  hist.push({ id: sel, h: structuredClone(s.hand[sel] || empty()) });
+  if (v === '') delete s.hand[sel];
+  else s.hand[sel] = { ...empty(), manual: Math.min(999, Math.max(0, Math.round(+v) || 0)) };
+  note = '';
+  commit();
+});
+$('manual').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 $('padWho').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 $('padWho').addEventListener('blur', render);
 
