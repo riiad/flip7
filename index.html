@@ -3,173 +3,207 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>:root { color-scheme: light; } body { margin: 0; } [hidden] { display: none !important; }</style>
+<meta name="theme-color" content="#E6F0EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0A1A1C" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Flip 7">
 <title>Carnet Flip 7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=DM+Sans:opsz,wght@9..40,400;9..40,600&display=swap">
 <style>
-/* Layout: players at the table on top, the deck always open at the bottom of the screen */
+/* Layout: a phone app shell. Players scroll in the middle, the deck sits under the thumb, everything else lives in the "Partie" sheet. */
 :root {
-  --ground: #EAF2F0; --surface: #FFFFFF; --ink: #10292D; --muted: #56706F; --line: #D2E0DC;
-  --accent: #F4B000; --on-accent: #231A00; --bust: #C8412F;
+  color-scheme: light;
+  --felt: #E6F0EC; --surface: #FFFFFF; --ink: #10292D; --muted: #56706F; --line: #D2E0DC;
+  --accent: #F4B000; --on-accent: #231A00; --sel: #FFF4CC; --bust: #C8412F;
   --display: "Bungee", "Arial Black", Impact, sans-serif;
   --body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ground: #0B1C1F; --surface: #13292C; --ink: #E4F0EE; --muted: #8EA6A6; --line: #244140;
-    --accent: #FFC233; --bust: #F2705F; color-scheme: dark;
+    --felt: #0A1A1C; --surface: #13292C; --ink: #E4F0EE; --muted: #8EA6A6; --line: #244140;
+    --accent: #FFC233; --sel: #33290A; --bust: #F2705F; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --ground: #0B1C1F; --surface: #13292C; --ink: #E4F0EE; --muted: #8EA6A6; --line: #244140;
-  --accent: #FFC233; --bust: #F2705F; color-scheme: dark;
+  --felt: #0A1A1C; --surface: #13292C; --ink: #E4F0EE; --muted: #8EA6A6; --line: #244140;
+  --accent: #FFC233; --sel: #33290A; --bust: #F2705F; color-scheme: dark;
 }
-body { background: var(--ground); color: var(--ink); font: 16px/1.45 var(--body); padding-inline: 16px; }
-main { max-width: 34rem; margin: 0 auto; padding-block: 1.5rem 3rem; display: grid; gap: 1rem; }
-button { font: inherit; cursor: pointer; color: inherit; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--felt); color: var(--ink); font: 16px/1.4 var(--body); -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-button:disabled { opacity: .4; cursor: default; }
+button:disabled { opacity: .35; cursor: default; }
+input { font: inherit; color: var(--ink); }
 
-header { display: flex; align-items: end; justify-content: space-between; gap: .5rem 1rem; flex-wrap: wrap; }
-h1 { font: 400 2.2rem/1 var(--display); margin: 0; }
+.app { height: 100%; height: 100dvh; max-width: 30rem; margin: 0 auto; display: flex; flex-direction: column; }
+
+/* Top bar */
+.top { display: flex; align-items: center; gap: .9rem; padding: calc(.6rem + env(safe-area-inset-top, 0px)) 16px .6rem; }
+h1 { font: 400 1.35rem/1 var(--display); margin: 0; white-space: nowrap; }
 h1 b {
-  display: inline-grid; place-items: center; width: 1.2em; height: 1.55em; margin-left: .12em;
+  display: inline-grid; place-items: center; width: 1.2em; height: 1.55em; margin-left: .1em;
   background: var(--accent); color: var(--on-accent); border-radius: .16em; font-weight: 400;
-  transform: rotate(6deg); box-shadow: 0 3px 0 rgb(0 0 0 / .18);
+  transform: rotate(6deg); box-shadow: 0 2px 0 rgb(0 0 0 / .18);
 }
-.goal { margin: 0; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.goal strong { font: 400 1.25rem var(--display); color: var(--ink); letter-spacing: 0; }
-.rules { margin: 0; color: var(--muted); font-size: .875rem; max-width: 60ch; }
-
-#msg { margin: 0; padding: .75rem 1rem; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
-#msg.win { background: var(--accent); color: var(--on-accent); border-color: transparent; font-size: 1.1rem; }
-#msg button { background: none; border: 0; padding: 0; font-weight: 600; text-decoration: underline; }
-
-#players { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
-#players:empty::after { content: "Ajoutez au moins deux joueurs ci-dessous."; color: var(--muted); }
-.p {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto 3.75rem auto; align-items: center;
-  gap: .4rem .6rem; padding: .6rem .5rem .7rem .9rem; cursor: pointer;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
-}
-.p.sel { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
-.pick { display: grid; gap: .3rem; justify-items: start; text-align: left; background: none; border: 0; padding: 0; min-width: 0; }
-.nm { font-weight: 600; font-size: 1.05rem; overflow-wrap: anywhere; }
-.hand { display: flex; flex-wrap: wrap; gap: 3px; min-height: 1.35rem; }
-.hand i {
-  font: normal 400 .72rem/1 var(--display); padding: .25rem .32rem; border-radius: 4px;
-  background: var(--ground); border: 1px solid var(--line);
-}
-.hand i.m { background: var(--accent); color: var(--on-accent); border-color: transparent; }
-.hand:empty::after { content: "Aucune carte"; font-size: .8rem; color: var(--muted); }
-.p.busted .hand i { text-decoration: line-through; opacity: .55; }
-.live { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
-.live.bust { color: var(--bust); }
-.total { font: 400 1.4rem/1 var(--display); text-align: right; padding: .3rem .35rem; border-radius: 6px; }
-.total.lead { background: var(--accent); color: var(--on-accent); }
-.x { background: none; border: 0; color: var(--muted); min-width: 2rem; height: 2rem; border-radius: 6px; font-size: 1.2rem; }
-.x:hover { background: var(--line); }
-.x[data-armed] { color: var(--bust); font-size: .8rem; font-weight: 600; }
-.bar { grid-column: 1 / -1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
-.bar i { display: block; height: 100%; background: var(--c); transition: width .4s ease; }
-
-#add { display: flex; gap: .5rem; }
-#add input { flex: 1; min-width: 0; font: inherit; padding: .6rem .75rem; border: 1px dashed var(--muted); border-radius: 10px; background: none; color: var(--ink); }
-.ghost { background: none; border: 1px solid var(--line); border-radius: 10px; padding: .6rem .9rem; }
-.ghost:hover:not(:disabled) { background: var(--surface); }
+.round { margin: 0; flex: 1; display: grid; line-height: 1.2; }
+.round strong { font-size: 1rem; }
+.round span { font-size: .8rem; color: var(--muted); }
+.ghost { background: none; border: 1px solid var(--line); border-radius: 10px; padding: .55rem .9rem; min-height: 2.75rem; }
+.ghost:active:not(:disabled) { background: var(--surface); }
 .ghost[data-armed] { color: var(--bust); border-color: var(--bust); }
-.go {
-  font: 400 1.1rem var(--display); background: var(--accent); color: var(--on-accent); border: 0;
-  border-radius: 12px; padding: .85rem 1rem; box-shadow: 0 3px 0 rgb(0 0 0 / .2);
-}
-.go:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgb(0 0 0 / .2); }
 
-#pad {
-  position: sticky; bottom: 0; z-index: 1; display: grid; gap: .5rem; margin-inline: -16px;
-  padding: .75rem 16px calc(.75rem + env(safe-area-inset-bottom, 0px));
-  background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -10px 30px rgb(0 0 0 / .12);
+/* Players */
+.list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: .25rem 16px 1rem; display: grid; align-content: start; gap: .5rem; }
+#players { display: grid; gap: .5rem; }
+#msg { margin: 0; padding: .7rem .9rem; border-radius: 12px; border: 1px dashed var(--muted); display: flex; flex-wrap: wrap; gap: .25rem .75rem; align-items: center; font-size: .95rem; }
+#msg button { background: none; border: 0; padding: .4rem 0; font-weight: 600; text-decoration: underline; }
+.p {
+  position: relative; overflow: hidden; width: 100%; text-align: left;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto 3.6rem; grid-template-areas: "nm live total" "hand hand total";
+  align-items: center; gap: .3rem .6rem; padding: .65rem .75rem .8rem .9rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
 }
-@media (min-width: 36rem) { #pad { margin-inline: 0; border: 1px solid var(--line); border-radius: 16px; } }
-.padhead { margin: 0; display: flex; justify-content: space-between; gap: .5rem 1rem; flex-wrap: wrap; font-size: .9rem; }
-#padNote { color: var(--muted); }
-#padWho {
-  font: 600 1rem var(--body); color: var(--ink); background: none; border: 0; border-bottom: 1px dashed var(--muted);
-  padding: 0 .1rem; width: 9rem; field-sizing: content; min-width: 3ch; max-width: 12rem;
+.p::after { content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: var(--w); background: var(--c); transition: width .4s ease; }
+.p.sel { background: var(--sel); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.nm { grid-area: nm; font-weight: 600; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live { grid-area: live; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); }
+.live.bust { color: var(--bust); }
+.total { grid-area: total; justify-self: end; font: 400 1.45rem/1 var(--display); padding: .35rem .4rem; border-radius: 7px; }
+.total.lead { background: var(--accent); color: var(--on-accent); }
+.hand { grid-area: hand; display: flex; flex-wrap: wrap; gap: 3px; min-height: 1.35rem; align-items: center; }
+.hand i { font: normal 400 .75rem/1 var(--display); padding: .25rem .32rem; border-radius: 4px; background: var(--felt); border: 1px solid var(--line); }
+.hand i.m { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.p.sel .hand:empty::after { content: "Touche ses cartes en bas"; font-size: .85rem; color: var(--muted); }
+.p.busted .hand i { text-decoration: line-through; opacity: .55; }
+.empty { margin: 2rem 0; display: grid; gap: .75rem; justify-items: start; color: var(--muted); }
+
+/* Deck, always under the thumb */
+.panel {
+  display: grid; gap: .5rem; padding: .6rem 16px calc(.75rem + env(safe-area-inset-bottom, 0px));
+  background: var(--surface); border-top: 1px solid var(--line); border-radius: 20px 20px 0 0;
+  box-shadow: 0 -8px 30px rgb(0 0 0 / .12); -webkit-user-select: none; user-select: none;
 }
-#padWho:focus { outline: none; border-bottom: 1px solid var(--accent); }
-#padNote.bad { color: var(--bust); font-weight: 600; }
+.dhead { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-height: 2.75rem; }
+.dhead p { margin: 0; min-width: 0; font-size: .95rem; }
+#who { font-weight: 600; }
+#note { color: var(--muted); }
+#note.bad { color: var(--bust); font-weight: 600; }
+.link { background: none; border: 0; padding: .6rem 0 .6rem .5rem; color: var(--muted); font-size: .9rem; white-space: nowrap; }
 .deck { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; }
 .deck button {
-  height: 2.7rem; padding: 0; font: 400 1.05rem var(--display);
-  background: var(--ground); border: 1px solid var(--line); border-radius: 7px; transition: transform .12s;
+  height: 3rem; padding: 0; font: 400 1.15rem var(--display);
+  background: var(--felt); border: 1px solid var(--line); border-radius: 8px; transition: transform .1s;
 }
+.deck button:active:not(:disabled) { transform: scale(.92); }
 .deck.mods { grid-template-columns: repeat(6, 1fr); }
-.deck.mods button { height: 2.3rem; font-size: .9rem; }
+.deck.mods button { height: 2.6rem; font-size: .95rem; }
 .deck button[aria-pressed="true"], .deck button[data-on] {
-  background: var(--accent); color: var(--on-accent); border-color: transparent;
-  transform: translateY(-2px); box-shadow: 0 2px 0 rgb(0 0 0 / .2);
+  background: var(--accent); color: var(--on-accent); border-color: transparent; box-shadow: 0 2px 0 rgb(0 0 0 / .2);
 }
 .deck button[data-on]:disabled, .deck button[aria-pressed="true"]:disabled { opacity: 1; }
-.tools { display: flex; gap: .4rem; }
-.tools input {
-  width: 4.5rem; flex: none; box-sizing: border-box; padding: .4rem; text-align: right; border: 1px solid var(--line); border-radius: 10px;
-  font: 600 1rem var(--body); font-variant-numeric: tabular-nums; background: var(--ground); color: var(--ink);
-  -moz-appearance: textfield; appearance: textfield;
-}
-.tools input::-webkit-inner-spin-button, .tools input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.tools input::placeholder { color: var(--muted); font-weight: 400; font-size: .85rem; }
-.tools button { flex: 1; padding: .5rem .4rem; font-size: .85rem; line-height: 1.15; }
+.tools { display: grid; grid-template-columns: 1fr 1fr 5.5rem; gap: .35rem; }
+.tools button { min-height: 2.75rem; padding: .4rem; font-size: .9rem; border-radius: 8px; }
 #sc[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 #bust { color: var(--bust); border-color: var(--bust); }
 #bust[aria-pressed="true"] { background: var(--bust); color: var(--surface); }
+#manual {
+  width: 100%; min-height: 2.75rem; padding: .4rem .6rem; text-align: right; border: 1px solid var(--line); border-radius: 8px;
+  font-weight: 600; font-size: 1.05rem; font-variant-numeric: tabular-nums; background: var(--felt);
+  -moz-appearance: textfield; appearance: textfield;
+}
+#manual::-webkit-inner-spin-button, #manual::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+#manual::placeholder { color: var(--muted); font-weight: 400; font-size: .9rem; }
+.go {
+  font: 400 1.1rem var(--display); background: var(--accent); color: var(--on-accent); border: 0;
+  border-radius: 12px; padding: .9rem 1rem; box-shadow: 0 3px 0 rgb(0 0 0 / .2);
+}
+.go:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgb(0 0 0 / .2); }
+#over { padding-top: 1.25rem; }
+#over p { margin: 0; font-size: 1.15rem; }
+#over strong { font: 400 1.6rem/1.2 var(--display); display: block; }
 
-h2 { margin: .5rem 0 0; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-.sheet { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+/* "Partie" sheet */
+#sheet {
+  margin: auto auto 0; width: 100%; max-width: 30rem; max-height: 88dvh; padding: 0 16px calc(1rem + env(safe-area-inset-bottom, 0px));
+  border: 0; border-radius: 20px 20px 0 0; background: var(--surface); color: var(--ink); overflow-y: auto; overscroll-behavior: contain;
+}
+#sheet::backdrop { background: rgb(5 20 22 / .5); }
+.shead { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; padding: .75rem 0; background: var(--surface); }
+.shead h2 { margin: 0; font-size: 1.15rem; }
+#sheet h3 { margin: 1rem 0 .5rem; font-size: .95rem; color: var(--muted); font-weight: 600; }
+#roster { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+#roster li { display: flex; gap: .4rem; align-items: center; }
+#roster li::before { content: ""; width: .7rem; height: .7rem; border-radius: 50%; background: var(--c); flex: none; }
+#roster input, #add input {
+  flex: 1; min-width: 0; min-height: 2.75rem; padding: .5rem .75rem; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--felt); font-weight: 600;
+}
+#add { display: flex; gap: .4rem; margin-top: .5rem; }
+#add input { background: none; border-style: dashed; border-color: var(--muted); font-weight: 400; }
+.x { color: var(--muted); }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-th, td { padding: .5rem .75rem; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+th, td { padding: .5rem .7rem; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
 th:first-child { text-align: left; color: var(--muted); font-weight: 400; }
 thead th { font-weight: 600; font-size: .875rem; }
 tbody tr:last-child > * { border-bottom: 0; }
 td.bust { color: var(--bust); }
-.foot { display: flex; flex-wrap: wrap; gap: .5rem; }
-@media (prefers-reduced-motion: reduce) { .bar i, .deck button { transition: none; } }
+.muted { color: var(--muted); margin: 0; }
+.foot { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.25rem; }
+@media (prefers-reduced-motion: reduce) { .p::after, .deck button { transition: none; } }
 </style>
 </head>
 <body>
-<main>
-  <header>
+<div class="app">
+  <header class="top">
     <h1>Flip<b>7</b></h1>
-    <p class="goal">Premier à <strong>200</strong></p>
+    <p class="round"><strong id="roundNo">Manche 1</strong><span>Premier à 200 points</span></p>
+    <button class="ghost" data-act="menu">Partie</button>
   </header>
-  <p class="rules">Touche un joueur, puis ses cartes. Son nom se modifie au-dessus des cartes, son score peut aussi se taper à la main. ×2 double les cartes numéros, 7 cartes numéros = +15, un doublon = bust.</p>
-  <p id="msg" hidden></p>
-  <ol id="players"></ol>
-  <form id="add"><input id="newName" placeholder="Nom du joueur" maxlength="20" aria-label="Nom du nouveau joueur"><button class="ghost">Ajouter</button></form>
 
-  <section id="pad" aria-label="Cartes">
-    <p class="padhead"><label for="padWho">Cartes de <input id="padWho" maxlength="20" autocomplete="off" title="Touche pour renommer"></label><span id="padNote" aria-live="polite"></span></p>
+  <div class="list">
+    <p id="msg" hidden></p>
+    <div id="players"></div>
+  </div>
+
+  <section class="panel" id="deck" aria-label="Cartes">
+    <div class="dhead">
+      <p><span id="who"></span> <span id="note" aria-live="polite"></span></p>
+      <button class="link" id="undoCard" data-act="undoCard">Annuler la carte</button>
+    </div>
     <div class="deck" id="nums"></div>
     <div class="deck mods" id="mods"></div>
     <div class="tools">
-      <button type="button" class="ghost" id="sc" data-act="sc" aria-pressed="false">Seconde Chance</button>
-      <button type="button" class="ghost" id="bust" data-act="bust" aria-pressed="false">Bust</button>
-      <button type="button" class="ghost" id="undoCard" data-act="undoCard">Annuler la carte</button>
-      <input id="manual" type="number" inputmode="numeric" min="0" max="999" placeholder="Score" aria-label="Saisir le score à la main">
+      <button class="ghost" id="sc" data-act="sc" aria-pressed="false">Seconde chance</button>
+      <button class="ghost" id="bust" data-act="bust" aria-pressed="false">Bust</button>
+      <input id="manual" type="number" inputmode="numeric" min="0" max="999" placeholder="Score" aria-label="Taper le score à la main">
     </div>
     <button class="go" id="go" data-act="round">Valider la manche</button>
   </section>
 
-  <section id="history" hidden>
-    <h2>Manches</h2>
-    <div class="sheet"><table id="hist"></table></div>
+  <section class="panel" id="over" hidden>
+    <p id="winner"></p>
+    <button class="go" data-act="again">Nouvelle partie</button>
   </section>
+</div>
+
+<dialog id="sheet" aria-labelledby="sheetTitle">
+  <form method="dialog" class="shead"><h2 id="sheetTitle">Partie</h2><button class="ghost">Fermer</button></form>
+  <h3>Joueurs</h3>
+  <ul id="roster"></ul>
+  <form id="add"><input id="newName" placeholder="Nom du joueur" maxlength="20" autocomplete="off" enterkeyhint="done" aria-label="Nom du nouveau joueur"><button class="ghost">Ajouter</button></form>
+  <h3>Manches</h3>
+  <div id="histWrap"></div>
   <div class="foot">
     <button class="ghost" id="undo" data-act="undo">Annuler la dernière manche</button>
     <button class="ghost" data-act="reset">Nouvelle partie</button>
   </div>
-</main>
+</dialog>
 
 <script>
 const KEY = 'flip7-carnet', GOAL = 200;
@@ -177,6 +211,7 @@ const COLORS = ['#E4572E', '#2E86AB', '#9B5DE5', '#3BA55C', '#E0A100', '#D63384'
 const $ = id => document.getElementById(id);
 const esc = t => String(t).replace(/[&<"]/g, c => ({ '&': '&amp;', '<': '&lt;', '"': '&quot;' })[c]);
 const empty = () => ({ nums: [], mods: [], sc: false, bust: false });
+const color = p => COLORS[p.id % COLORS.length];
 
 let s;
 try { s = JSON.parse(localStorage.getItem(KEY)); } catch {}
@@ -210,12 +245,12 @@ const handTotal = h => h.manual ?? (h.bust ? 0 : roundScore(h.nums, h.mods));
 // A number already in the hand is a duplicate: the Second Chance absorbs it, otherwise bust.
 function drawNumber(h, n) {
   if (!h.nums.includes(n)) h.nums.push(n);
-  else if (h.sc) { h.sc = false; return `Seconde Chance utilisée sur le ${n}.`; }
-  else { h.bust = true; return `Deuxième ${n} : bust.`; }
+  else if (h.sc) { h.sc = false; return `Seconde chance utilisée sur le ${n}`; }
+  else { h.bust = true; return `Deuxième ${n} : bust`; }
   return '';
 }
 
-const chips = h => h.manual != null ? '<i class="m">score saisi</i>' : [
+const chips = h => h.manual != null ? '<i class="m">score tapé</i>' : [
   ...[...h.nums].sort((a, b) => a - b).map(n => `<i>${n}</i>`),
   ...[...h.mods].sort((a, b) => (a === 'x2') - (b === 'x2') || a - b).map(m => `<i class="m">${m === 'x2' ? '×2' : '+' + m}</i>`),
   h.sc ? '<i class="m">2de chance</i>' : '',
@@ -223,59 +258,64 @@ const chips = h => h.manual != null ? '<i class="m">score saisi</i>' : [
 
 function render() {
   const t = totals(), st = status(s.players, t), n = s.rounds.length + 1;
-  $('players').innerHTML = s.players.map(p => {
-    const h = s.hand[p.id] || empty(), live = handTotal(h);
-    return `
-    <li class="p${p.id === sel ? ' sel' : ''}${h.bust ? ' busted' : ''}" data-id="${p.id}" style="--c:${COLORS[p.id % COLORS.length]}">
-      <button class="pick" data-act="pick" data-id="${p.id}" aria-pressed="${p.id === sel}">
-        <span class="nm">${esc(p.name)}</span><span class="hand">${chips(h)}</span>
-      </button>
-      <span class="live${h.bust ? ' bust' : ''}">${h.bust ? 'Bust' : live ? '+' + live : ''}</span>
-      <output class="total${st.max > 0 && t[p.id] === st.max ? ' lead' : ''}">${t[p.id]}</output>
-      <button class="x" data-act="del" data-id="${p.id}" aria-label="Retirer ${esc(p.name)}">×</button>
-      <div class="bar"><i style="width:${Math.min(t[p.id] / GOAL, 1) * 100}%"></i></div>
-    </li>`;
-  }).join('');
+  $('roundNo').textContent = st.winner ? 'Partie terminée' : `Manche ${n}`;
 
-  const msg = $('msg');
-  msg.className = st.winner ? 'win' : '';
-  msg.innerHTML = s.ex ? `Partie d'exemple. <button type="button" data-act="fresh">Commencer une vraie partie</button>`
-    : st.winner ? `<span><strong>${esc(st.winner.name)}</strong> gagne avec ${st.max} points.</span>`
-    : st.tie ? `Égalité à ${st.max} points : on joue une manche de plus.` : '';
-  msg.hidden = !msg.innerHTML;
+  $('players').innerHTML = s.players.map(p => {
+    const h = s.hand[p.id] || empty(), live = handTotal(h), on = p.id === sel, bust = h.bust && h.manual == null;
+    return `<button class="p${on ? ' sel' : ''}${bust ? ' busted' : ''}" data-act="pick" data-id="${p.id}" aria-pressed="${on}"
+        style="--c:${color(p)};--w:${Math.min(t[p.id] / GOAL, 1) * 100}%">
+      <span class="nm">${esc(p.name)}</span>
+      <span class="live${bust ? ' bust' : ''}">${bust ? 'Bust' : live ? '+' + live : ''}</span>
+      <span class="total${st.max > 0 && t[p.id] === st.max ? ' lead' : ''}">${t[p.id]}</span>
+      <span class="hand">${chips(h)}</span>
+    </button>`;
+  }).join('') || '<div class="empty">Ajoute les joueurs pour commencer.<button class="ghost" data-act="menu">Ajouter des joueurs</button></div>';
+
+  $('msg').innerHTML = s.ex ? `Partie d'exemple. <button data-act="fresh">Commencer une vraie partie</button>`
+    : st.tie ? `Égalité à ${st.max} points : encore une manche.` : '';
+  $('msg').hidden = !$('msg').innerHTML;
+
+  $('over').hidden = !st.winner;
+  if (st.winner) $('winner').innerHTML = `<strong>${esc(st.winner.name)}</strong> gagne avec ${st.max} points.`;
 
   const p = s.players.find(p => p.id === sel), h = s.hand[sel] || empty();
-  $('pad').hidden = !p || !!st.winner;
-  if (p) {
-    if (document.activeElement !== $('padWho')) $('padWho').value = p.name;
-    $('padNote').textContent = note || (h.bust ? 'Bust : 0 point' : h.nums.length === 7 ? 'Flip 7 : +15' : '');
-    $('padNote').className = h.bust ? 'bad' : '';
-    for (const b of $('nums').children) {
-      const k = +b.dataset.n, on = h.nums.includes(k);
-      b.toggleAttribute('data-on', on);
-      b.setAttribute('aria-label', on ? `${k}, déjà dans la main` : k);
-      b.disabled = h.bust || h.nums.length >= 7;
-    }
-    for (const b of $('mods').children) { b.setAttribute('aria-pressed', h.mods.includes(modKey(b))); b.disabled = h.bust; }
-    $('sc').setAttribute('aria-pressed', h.sc);
-    $('sc').disabled = h.bust;
-    $('bust').setAttribute('aria-pressed', h.bust);
-    $('undoCard').disabled = !hist.length;
-    if (document.activeElement !== $('manual')) $('manual').value = h.manual ?? '';
-    $('go').textContent = `Valider la manche ${n}`;
+  $('deck').hidden = !p || !!st.winner;
+  if (!p) return;
+  $('who').textContent = p.name;
+  $('note').textContent = note || (h.manual != null ? '' : h.bust ? 'Bust : 0 point' : h.nums.length === 7 ? 'Flip 7 : +15' : '');
+  $('note').className = h.bust && !note.startsWith('Seconde') ? 'bad' : '';
+  const locked = h.bust && h.manual == null;
+  for (const b of $('nums').children) {
+    const k = +b.dataset.n, has = h.nums.includes(k);
+    b.toggleAttribute('data-on', has);
+    b.setAttribute('aria-label', has ? `${k}, déjà dans la main` : k);
+    b.disabled = locked || h.nums.length >= 7;
   }
-  $('undo').disabled = !s.rounds.length;
+  for (const b of $('mods').children) { b.setAttribute('aria-pressed', h.mods.includes(modKey(b))); b.disabled = locked; }
+  $('sc').setAttribute('aria-pressed', h.sc);
+  $('sc').disabled = locked;
+  $('bust').setAttribute('aria-pressed', locked);
+  $('undoCard').disabled = !hist.length;
+  if (document.activeElement !== $('manual')) $('manual').value = h.manual ?? '';
+  $('go').textContent = `Valider la manche ${n}`;
+}
 
-  $('history').hidden = !s.rounds.length;
-  $('hist').innerHTML = `<thead><tr><th>Manche</th>${s.players.map(p => `<th>${esc(p.name)}</th>`).join('')}</tr></thead>
+function renderSheet() {
+  $('roster').innerHTML = s.players.map(p => `<li style="--c:${color(p)}">
+    <input class="rn" data-id="${p.id}" value="${esc(p.name)}" maxlength="20" autocomplete="off" enterkeyhint="done" aria-label="Nom du joueur">
+    <button class="ghost x" data-act="del" data-id="${p.id}" aria-label="Retirer ${esc(p.name)}">Retirer</button></li>`).join('');
+  $('histWrap').innerHTML = s.rounds.length ? `<div class="tbl"><table>
+    <thead><tr><th>Manche</th>${s.players.map(p => `<th>${esc(p.name)}</th>`).join('')}</tr></thead>
     <tbody>${s.rounds.map((r, i) => `<tr><th>${i + 1}</th>${s.players.map(p =>
-      `<td${r[p.id] === 0 ? ' class="bust"' : ''}>${r[p.id] ?? '–'}</td>`).join('')}</tr>`).join('')}</tbody>`;
+      `<td${r[p.id] === 0 ? ' class="bust"' : ''}>${r[p.id] ?? '–'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+    : '<p class="muted">Aucune manche jouée.</p>';
+  $('undo').disabled = !s.rounds.length;
 }
 
 const modKey = b => b.dataset.m === 'x2' ? 'x2' : +b.dataset.m;
-$('nums').innerHTML = Array.from({ length: 13 }, (_, n) => `<button type="button" data-act="num" data-n="${n}">${n}</button>`).join('');
-$('mods').innerHTML = [2, 4, 6, 8, 10].map(m => `<button type="button" data-act="mod" data-m="${m}">+${m}</button>`).join('')
-  + '<button type="button" data-act="mod" data-m="x2">×2</button>';
+$('nums').innerHTML = Array.from({ length: 13 }, (_, n) => `<button data-act="num" data-n="${n}">${n}</button>`).join('');
+$('mods').innerHTML = [2, 4, 6, 8, 10].map(m => `<button data-act="mod" data-m="${m}">+${m}</button>`).join('')
+  + '<button data-act="mod" data-m="x2">×2</button>';
 
 // Every tap on the deck changes the selected player's hand and can be undone.
 function play(fn) {
@@ -284,10 +324,12 @@ function play(fn) {
   hist.push({ id: sel, h: structuredClone(s.hand[sel]) });
   if (s.hand[sel].manual != null) s.hand[sel] = empty();
   note = fn(s.hand[sel]) || '';
+  navigator.vibrate?.(8);
   commit();
 }
 
 function scoreRound() {
+  $('manual').blur();
   const r = {};
   for (const p of s.players) r[p.id] = s.hand[p.id] ? handTotal(s.hand[p.id]) : 0;
   s.rounds.push(r);
@@ -297,7 +339,8 @@ function scoreRound() {
 function newRound() {
   s.hand = {}; hist.length = 0; note = ''; sel = s.players[0]?.id;
   commit();
-  scrollTo({ top: 0, behavior: 'smooth' });
+  if ($('sheet').open) renderSheet();
+  document.querySelector('.list').scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function reset(clear) {
@@ -305,7 +348,9 @@ function reset(clear) {
   newRound();
 }
 
-// Two taps for anything that throws scores away (the viewer blocks confirm()).
+function openSheet() { renderSheet(); $('sheet').showModal(); }
+
+// Two taps for anything that throws scores away.
 function armed(btn, label, fn) {
   if (btn.dataset.armed) return fn();
   const old = btn.textContent;
@@ -315,8 +360,7 @@ function armed(btn, label, fn) {
 
 document.addEventListener('click', e => {
   const b = e.target.closest('button[data-act]');
-  const row = e.target.closest('.p');
-  if (!b) { if (row) { sel = +row.dataset.id; note = ''; render(); } return; }
+  if (!b) return;
   const id = +b.dataset.id;
   ({
     pick: () => { sel = id; note = ''; render(); },
@@ -326,22 +370,28 @@ document.addEventListener('click', e => {
     bust: () => play(h => { h.bust = !h.bust; }),
     undoCard: () => { const u = hist.pop(); s.hand[u.id] = u.h; sel = u.id; note = ''; commit(); },
     round: scoreRound,
-    fresh: () => reset(true),
-    undo: () => armed(b, 'Confirmer l’annulation', () => { s.rounds.pop(); commit(); }),
-    reset: () => s.ex ? reset(true) : armed(b, 'Confirmer : tout remettre à 0', () => reset(false)),
-    del: () => armed(b, 'Retirer ?', () => {
+    menu: openSheet,
+    again: () => reset(false),
+    fresh: () => { reset(true); openSheet(); $('newName').focus(); },
+    undo: () => armed(b, 'Confirmer l’annulation', () => { s.rounds.pop(); commit(); renderSheet(); }),
+    reset: () => s.ex ? (reset(true), $('newName').focus()) : armed(b, 'Confirmer : scores à 0', () => { reset(false); $('sheet').close(); }),
+    del: () => armed(b, 'Confirmer', () => {
       s.players = s.players.filter(p => p.id !== id); delete s.hand[id];
       if (sel === id) sel = s.players[0]?.id;
-      commit();
+      commit(); renderSheet();
     }),
   })[b.dataset.act]();
 });
 
-// Renaming happens in the deck header, since a tap on a row selects the player.
-$('padWho').addEventListener('input', e => {
-  s.players.find(p => p.id === sel).name = e.target.value.trim() || 'Joueur';
+// Tap on the dimmed backdrop closes the sheet.
+$('sheet').addEventListener('click', e => { if (e.target === $('sheet')) $('sheet').close(); });
+
+$('roster').addEventListener('input', e => {
+  s.players.find(p => p.id === +e.target.dataset.id).name = e.target.value.trim() || 'Joueur';
   commit();
 });
+$('roster').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+
 // A typed score replaces the cards; tapping a card afterwards goes back to counting cards.
 $('manual').addEventListener('change', e => {
   const v = e.target.value.trim();
@@ -352,8 +402,6 @@ $('manual').addEventListener('change', e => {
   commit();
 });
 $('manual').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
-$('padWho').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
-$('padWho').addEventListener('blur', render);
 
 $('add').addEventListener('submit', e => {
   e.preventDefault();
@@ -362,8 +410,14 @@ $('add').addEventListener('submit', e => {
   s.players.push({ id: s.next++, name });
   sel ??= s.players.at(-1).id;
   $('newName').value = '';
-  commit();
+  commit(); renderSheet();
+  $('newName').focus();
 });
+
+// Keep the screen on while the app is open at the table.
+const keepAwake = () => navigator.wakeLock?.request('screen').catch(() => {});
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
+keepAwake();
 
 render();
 </script>
