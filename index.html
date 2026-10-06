@@ -94,6 +94,11 @@ h1 b {
 @media (min-width: 36rem) { #pad { margin-inline: 0; border: 1px solid var(--line); border-radius: 16px; } }
 .padhead { margin: 0; display: flex; justify-content: space-between; gap: .5rem 1rem; flex-wrap: wrap; font-size: .9rem; }
 #padNote { color: var(--muted); }
+#padWho {
+  font: 600 1rem var(--body); color: var(--ink); background: none; border: 0; border-bottom: 1px dashed var(--muted);
+  padding: 0 .1rem; width: 9rem; field-sizing: content; min-width: 3ch; max-width: 12rem;
+}
+#padWho:focus { outline: none; border-bottom: 1px solid var(--accent); }
 #padNote.bad { color: var(--bust); font-weight: 600; }
 .deck { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; }
 .deck button {
@@ -131,13 +136,13 @@ td.bust { color: var(--bust); }
     <h1>Flip<b>7</b></h1>
     <p class="goal">Premier à <strong>200</strong></p>
   </header>
-  <p class="rules">Touche un joueur, puis ses cartes. ×2 double les cartes numéros, 7 cartes numéros = +15, un doublon = bust.</p>
+  <p class="rules">Touche un joueur, puis ses cartes. Son nom se modifie au-dessus des cartes. ×2 double les cartes numéros, 7 cartes numéros = +15, un doublon = bust.</p>
   <p id="msg" hidden></p>
   <ol id="players"></ol>
   <form id="add"><input id="newName" placeholder="Nom du joueur" maxlength="20" aria-label="Nom du nouveau joueur"><button class="ghost">Ajouter</button></form>
 
   <section id="pad" aria-label="Cartes">
-    <p class="padhead"><span>Cartes de <strong id="padWho"></strong></span><span id="padNote" aria-live="polite"></span></p>
+    <p class="padhead"><label for="padWho">Cartes de <input id="padWho" maxlength="20" autocomplete="off" title="Touche pour renommer"></label><span id="padNote" aria-live="polite"></span></p>
     <div class="deck" id="nums"></div>
     <div class="deck mods" id="mods"></div>
     <div class="tools">
@@ -234,7 +239,7 @@ function render() {
   const p = s.players.find(p => p.id === sel), h = s.hand[sel] || empty();
   $('pad').hidden = !p || !!st.winner;
   if (p) {
-    $('padWho').textContent = p.name;
+    if (document.activeElement !== $('padWho')) $('padWho').value = p.name;
     $('padNote').textContent = note || (h.bust ? 'Bust : 0 point' : h.nums.length === 7 ? 'Flip 7 : +15' : '');
     $('padNote').className = h.bust ? 'bad' : '';
     for (const b of $('nums').children) {
@@ -321,6 +326,14 @@ document.addEventListener('click', e => {
     }),
   })[b.dataset.act]();
 });
+
+// Renaming happens in the deck header, since a tap on a row selects the player.
+$('padWho').addEventListener('input', e => {
+  s.players.find(p => p.id === sel).name = e.target.value.trim() || 'Joueur';
+  commit();
+});
+$('padWho').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+$('padWho').addEventListener('blur', render);
 
 $('add').addEventListener('submit', e => {
   e.preventDefault();
