@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Flip 7">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <title>Carnet Flip 7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -153,6 +156,10 @@ th:first-child { text-align: left; color: var(--muted); font-weight: 400; }
 thead th { font-weight: 600; font-size: .875rem; }
 tbody tr:last-child > * { border-bottom: 0; }
 td.bust { color: var(--bust); }
+.rdel { background: none; border: 0; padding: .35rem .2rem; color: var(--muted); white-space: nowrap; }
+.rdel b { font-weight: 400; margin-left: .35rem; opacity: .7; }
+.rdel[data-armed] { color: var(--bust); font-weight: 600; }
+.hint { margin: .5rem 0 0; font-size: .85rem; color: var(--muted); }
 .muted { color: var(--muted); margin: 0; }
 .foot { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.25rem; }
 @media (prefers-reduced-motion: reduce) { .p::after, .deck button { transition: none; } }
@@ -200,7 +207,6 @@ td.bust { color: var(--bust); }
   <h3>Manches</h3>
   <div id="histWrap"></div>
   <div class="foot">
-    <button class="ghost" id="undo" data-act="undo">Annuler la dernière manche</button>
     <button class="ghost" data-act="reset">Nouvelle partie</button>
   </div>
 </dialog>
@@ -306,10 +312,10 @@ function renderSheet() {
     <button class="ghost x" data-act="del" data-id="${p.id}" aria-label="Retirer ${esc(p.name)}">Retirer</button></li>`).join('');
   $('histWrap').innerHTML = s.rounds.length ? `<div class="tbl"><table>
     <thead><tr><th>Manche</th>${s.players.map(p => `<th>${esc(p.name)}</th>`).join('')}</tr></thead>
-    <tbody>${s.rounds.map((r, i) => `<tr><th>${i + 1}</th>${s.players.map(p =>
-      `<td${r[p.id] === 0 ? ' class="bust"' : ''}>${r[p.id] ?? '–'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+    <tbody>${s.rounds.map((r, i) => `<tr><th><button class="rdel" data-act="delRound" data-i="${i}" aria-label="Annuler la manche ${i + 1}">${i + 1}<b>×</b></button></th>${s.players.map(p =>
+      `<td${r[p.id] === 0 ? ' class="bust"' : ''}>${r[p.id] ?? '–'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <p class="hint">Touche le numéro d'une manche pour l'annuler.</p>`
     : '<p class="muted">Aucune manche jouée.</p>';
-  $('undo').disabled = !s.rounds.length;
 }
 
 const modKey = b => b.dataset.m === 'x2' ? 'x2' : +b.dataset.m;
@@ -373,7 +379,7 @@ document.addEventListener('click', e => {
     menu: openSheet,
     again: () => reset(false),
     fresh: () => { reset(true); openSheet(); $('newName').focus(); },
-    undo: () => armed(b, 'Confirmer l’annulation', () => { s.rounds.pop(); commit(); renderSheet(); }),
+    delRound: () => armed(b, 'Annuler ?', () => { s.rounds.splice(+b.dataset.i, 1); commit(); renderSheet(); }),
     reset: () => s.ex ? (reset(true), $('newName').focus()) : armed(b, 'Confirmer : scores à 0', () => { reset(false); $('sheet').close(); }),
     del: () => armed(b, 'Confirmer', () => {
       s.players = s.players.filter(p => p.id !== id); delete s.hand[id];
