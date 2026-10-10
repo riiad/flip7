@@ -98,10 +98,6 @@ h1 b {
 #who { font-weight: 600; min-width: 3ch; max-width: 9rem; padding-inline: .2rem; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #note { margin: 0; font-size: .9rem; color: var(--muted); }
 #note.bad { color: var(--bust); font-weight: 600; }
-#dup { display: flex; flex-wrap: wrap; gap: .35rem; padding: .4rem; border-radius: 12px; background: var(--sel); border: 1px solid var(--accent); }
-#dup button { flex: 1; min-height: 2.75rem; padding: .4rem .6rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; white-space: nowrap; }
-#dup .bad { color: var(--bust); border-color: var(--bust); }
-.deck button[data-pending] { outline: 3px solid var(--ink); outline-offset: 2px; }
 .link { background: none; border: 0; padding: .6rem 0 .6rem .5rem; color: var(--muted); font-size: .9rem; white-space: nowrap; }
 .deck { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; }
 .deck button {
@@ -202,10 +198,6 @@ td.bust { color: var(--bust); }
       <button class="link" id="undoCard" data-act="undoCard">Annuler la carte</button>
     </div>
     <p id="note" aria-live="polite" hidden></p>
-    <div id="dup" hidden>
-      <button data-act="removeCard" id="dupRemove"></button>
-      <button data-act="dupCard" id="dupDraw"></button>
-    </div>
     <div class="deck" id="nums"></div>
     <div class="deck mods" id="mods"></div>
     <div class="tools">
@@ -251,11 +243,10 @@ s ||= { ex: true, next: 4,
 s.hand ||= {};
 
 let sel = s.players.find(p => !s.hand[p.id])?.id ?? s.players[0]?.id, note = '';
-let pending = null; // a number tapped while already in the hand: remove it, or count it as a duplicate?
 const hist = []; // card taps this round, for "Annuler la carte"
 
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} };
-const commit = () => { pending = null; save(); render(); };
+const commit = () => { save(); render(); };
 const totals = () => Object.fromEntries(s.players.map(p => [p.id, s.rounds.reduce((a, r) => a + (r[p.id] || 0), 0)]));
 
 function status(players, t) {
@@ -271,14 +262,6 @@ function roundScore(nums, mods) {
   return sum * (mods.includes('x2') ? 2 : 1) + plus + (nums.length === 7 ? 15 : 0);
 }
 const handTotal = h => h.manual ?? (h.bust ? 0 : roundScore(h.nums, h.mods));
-
-// A number already in the hand is a duplicate: the Second Chance absorbs it, otherwise bust.
-function drawNumber(h, n) {
-  if (!h.nums.includes(n)) h.nums.push(n);
-  else if (h.sc) { h.sc = false; return `Seconde chance utilisée sur le ${n}`; }
-  else { h.bust = true; return `Deuxième ${n} : bust`; }
-  return '';
-}
 
 const chips = h => h.manual != null ? '<i class="m">score tapé</i>' : [
   ...[...h.nums].sort((a, b) => a - b).map(n => `<i>${n}</i>`),
@@ -313,22 +296,15 @@ function render() {
   if (!p) return;
   $('who').textContent = p.name;
   $('note').textContent = note || (h.manual != null ? '' : h.bust ? 'Bust : 0 point' : h.nums.length === 7 ? 'Flip 7 : +15' : '');
-  $('note').hidden = !$('note').textContent || pending != null;
-  $('dup').hidden = pending == null;
-  if (pending != null) {
-    $('dupRemove').textContent = `Retirer le ${pending}`;
-    $('dupDraw').textContent = h.sc ? 'Doublon : 2de chance' : 'Doublon : bust';
-    $('dupDraw').className = h.sc ? '' : 'bad';
-  }
+  $('note').hidden = !$('note').textContent;
   $('prev').disabled = $('nextP').disabled = s.players.length < 2;
-  $('note').className = h.bust && !note.startsWith('Seconde') ? 'bad' : '';
+  $('note').className = h.bust ? 'bad' : '';
   const locked = h.bust && h.manual == null;
   for (const b of $('nums').children) {
     const k = +b.dataset.n, has = h.nums.includes(k);
     b.toggleAttribute('data-on', has);
     b.setAttribute('aria-label', has ? `${k}, déjà dans la main` : k);
     b.disabled = locked || (!has && h.nums.length >= 7);
-    b.toggleAttribute('data-pending', k === pending);
   }
   for (const b of $('mods').children) { b.setAttribute('aria-pressed', h.mods.includes(modKey(b))); b.disabled = locked; }
   $('sc').setAttribute('aria-pressed', h.sc);
@@ -417,7 +393,6 @@ document.addEventListener('click', e => {
   const b = e.target.closest('button[data-act]');
   if (!b) return;
   const id = +b.dataset.id;
-  if (b.dataset.act !== 'removeCard' && b.dataset.act !== 'dupCard') pending = null;
   ({
     pick: () => { sel = id; note = ''; render(); },
     step: () => {
@@ -436,13 +411,13 @@ document.addEventListener('click', e => {
       commit(); renderSheet();
       document.querySelector(`.mv[data-id="${id}"][data-d="${b.dataset.d}"]`)?.focus();
     },
-    num: () => {
+    // A tap on a card already in the hand takes it back out; duplicates go through Bust.
+    num: () => play(h => {
       const n = +b.dataset.n;
-      if ((s.hand[sel]?.nums || []).includes(n)) { pending = n; note = ''; render(); }
-      else play(h => drawNumber(h, n));
-    },
-    removeCard: () => { const n = pending; play(h => { h.nums = h.nums.filter(x => x !== n); return `${n} retiré`; }); },
-    dupCard: () => { const n = pending; play(h => drawNumber(h, n)); },
+      if (!h.nums.includes(n)) return void h.nums.push(n);
+      h.nums = h.nums.filter(x => x !== n);
+      return `${n} retiré`;
+    }),
     mod: () => play(h => { const m = modKey(b), i = h.mods.indexOf(m); i < 0 ? h.mods.push(m) : h.mods.splice(i, 1); }),
     sc: () => play(h => { h.sc = !h.sc; }),
     bust: () => play(h => { h.bust = !h.bust; }),
