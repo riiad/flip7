@@ -81,6 +81,7 @@ h1 b {
 .hand { grid-area: hand; display: flex; flex-wrap: wrap; gap: 3px; min-height: 1.35rem; align-items: center; }
 .hand i { font: normal 400 .75rem/1 var(--display); padding: .25rem .32rem; border-radius: 4px; background: var(--felt); border: 1px solid var(--line); }
 .hand i.m { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.hand i.s { background: var(--ink); color: var(--surface); border-color: transparent; }
 .p.sel .hand:empty::after { content: "Touche ses cartes en bas"; font-size: .85rem; color: var(--muted); }
 .p.busted .hand i { text-decoration: line-through; opacity: .55; }
 .empty { margin: 2rem 0; display: grid; gap: .75rem; justify-items: start; color: var(--muted); }
@@ -111,11 +112,12 @@ h1 b {
   background: var(--accent); color: var(--on-accent); border-color: transparent; box-shadow: 0 2px 0 rgb(0 0 0 / .2);
 }
 .deck button[data-on]:disabled, .deck button[aria-pressed="true"]:disabled { opacity: 1; }
-.tools { display: grid; grid-template-columns: 1fr 1fr 5.5rem; gap: .35rem; }
+.tools { display: grid; grid-template-columns: 1fr 1fr 1fr 4.75rem; gap: .35rem; }
 .tools button { min-height: 2.75rem; padding: .4rem; font-size: .9rem; border-radius: 8px; }
 #sc[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 #bust { color: var(--bust); border-color: var(--bust); }
 #bust[aria-pressed="true"] { background: var(--bust); color: var(--surface); }
+#stop[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: transparent; }
 #manual {
   width: 100%; min-height: 2.75rem; padding: .4rem .6rem; text-align: right; border: 1px solid var(--line); border-radius: 8px;
   font-weight: 600; font-size: 1.05rem; font-variant-numeric: tabular-nums; background: var(--felt);
@@ -201,6 +203,7 @@ td.bust { color: var(--bust); }
     <div class="deck" id="nums"></div>
     <div class="deck mods" id="mods"></div>
     <div class="tools">
+      <button class="ghost" id="stop" data-act="stop" aria-pressed="false">Stop</button>
       <button class="ghost" id="sc" data-act="sc" aria-pressed="false">Seconde chance</button>
       <button class="ghost" id="bust" data-act="bust" aria-pressed="false">Bust</button>
       <input id="manual" type="number" inputmode="numeric" min="0" max="999" placeholder="Score" aria-label="Taper le score à la main">
@@ -267,6 +270,7 @@ const chips = h => h.manual != null ? '<i class="m">score tapé</i>' : [
   ...[...h.nums].sort((a, b) => a - b).map(n => `<i>${n}</i>`),
   ...[...h.mods].sort((a, b) => (a === 'x2') - (b === 'x2') || a - b).map(m => `<i class="m">${m === 'x2' ? '×2' : '+' + m}</i>`),
   h.sc ? '<i class="m">2de chance</i>' : '',
+  h.stop ? '<i class="s">Stop</i>' : '',
 ].join('');
 
 function render() {
@@ -299,7 +303,7 @@ function render() {
   $('note').hidden = !$('note').textContent;
   $('prev').disabled = $('nextP').disabled = s.players.length < 2;
   $('note').className = h.bust ? 'bad' : '';
-  const locked = h.bust && h.manual == null;
+  const busted = h.bust && h.manual == null, locked = busted || !!h.stop;
   for (const b of $('nums').children) {
     const k = +b.dataset.n, has = h.nums.includes(k);
     b.toggleAttribute('data-on', has);
@@ -309,7 +313,10 @@ function render() {
   for (const b of $('mods').children) { b.setAttribute('aria-pressed', h.mods.includes(modKey(b))); b.disabled = locked; }
   $('sc').setAttribute('aria-pressed', h.sc);
   $('sc').disabled = locked;
-  $('bust').setAttribute('aria-pressed', locked);
+  $('bust').setAttribute('aria-pressed', busted);
+  $('bust').disabled = !!h.stop;
+  $('stop').setAttribute('aria-pressed', !!h.stop);
+  $('stop').disabled = busted;
   $('undoCard').disabled = !hist.length;
   if (document.activeElement !== $('manual')) $('manual').value = h.manual ?? '';
   $('go').textContent = `Valider la manche ${n}`;
@@ -396,8 +403,11 @@ document.addEventListener('click', e => {
   ({
     pick: () => { sel = id; note = ''; render(); },
     step: () => {
-      const n = s.players.length, i = s.players.findIndex(p => p.id === sel);
-      sel = s.players[(i + +b.dataset.d + n) % n].id; note = ''; render();
+      // Skip players who are out of the round (stopped, bust, Flip 7), unless everyone is.
+      const n = s.players.length, i = s.players.findIndex(p => p.id === sel), d = +b.dataset.d;
+      const order = Array.from({ length: n }, (_, k) => s.players[(i + d * (k + 1) + n * n) % n]);
+      const out = h => h && (h.stop || h.bust || h.nums.length >= 7);
+      sel = (order.find(p => !out(s.hand[p.id])) || order[0]).id; note = ''; render();
       document.querySelector('.p.sel')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     },
     undoRound: () => {
@@ -421,6 +431,7 @@ document.addEventListener('click', e => {
     mod: () => play(h => { const m = modKey(b), i = h.mods.indexOf(m); i < 0 ? h.mods.push(m) : h.mods.splice(i, 1); }),
     sc: () => play(h => { h.sc = !h.sc; }),
     bust: () => play(h => { h.bust = !h.bust; }),
+    stop: () => play(h => { h.stop = !h.stop; }),
     undoCard: () => { const u = hist.pop(); s.hand[u.id] = u.h; sel = u.id; note = ''; commit(); },
     round: scoreRound,
     menu: openSheet,
