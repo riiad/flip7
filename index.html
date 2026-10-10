@@ -92,9 +92,11 @@ h1 b {
   box-shadow: 0 -8px 30px rgb(0 0 0 / .12); -webkit-user-select: none; user-select: none;
 }
 .dhead { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-height: 2.75rem; }
-.dhead p { margin: 0; min-width: 0; font-size: .95rem; }
-#who { font-weight: 600; }
-#note { color: var(--muted); }
+.who { display: flex; align-items: center; gap: .3rem; min-width: 0; }
+.arrow { flex: none; width: 2.75rem; height: 2.75rem; padding: 0 0 .15rem; border: 1px solid var(--line); border-radius: 10px; background: var(--felt); font-size: 1.5rem; line-height: 1; }
+.arrow:active:not(:disabled) { transform: scale(.92); }
+#who { font-weight: 600; min-width: 3ch; max-width: 9rem; padding-inline: .2rem; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#note { margin: 0; font-size: .9rem; color: var(--muted); }
 #note.bad { color: var(--bust); font-weight: 600; }
 .link { background: none; border: 0; padding: .6rem 0 .6rem .5rem; color: var(--muted); font-size: .9rem; white-space: nowrap; }
 .deck { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; }
@@ -140,7 +142,14 @@ h1 b {
 .shead h2 { margin: 0; font-size: 1.15rem; }
 #sheet h3 { margin: 1rem 0 .5rem; font-size: .95rem; color: var(--muted); font-weight: 600; }
 #roster { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
-#roster li { display: flex; gap: .4rem; align-items: center; }
+#roster li { display: flex; gap: .3rem; align-items: center; }
+#roster .mv { width: 2.75rem; padding: 0; font-size: 1.1rem; flex: none; }
+#roster .x { padding-inline: .6rem; flex: none; }
+#toast {
+  position: sticky; bottom: .5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .3rem .4rem .3rem 1rem; border-radius: 12px; background: var(--ink); color: var(--surface); box-shadow: 0 6px 20px rgb(0 0 0 / .25);
+}
+#toast button { background: none; border: 0; min-height: 2.75rem; padding: 0 .8rem; font-weight: 600; text-decoration: underline; }
 #roster li::before { content: ""; width: .7rem; height: .7rem; border-radius: 50%; background: var(--c); flex: none; }
 #roster input, #add input {
   flex: 1; min-width: 0; min-height: 2.75rem; padding: .5rem .75rem; border-radius: 10px;
@@ -176,13 +185,19 @@ td.bust { color: var(--bust); }
   <div class="list">
     <p id="msg" hidden></p>
     <div id="players"></div>
+    <div id="toast" role="status" hidden><span id="toastText"></span><button data-act="undoRound">Annuler</button></div>
   </div>
 
   <section class="panel" id="deck" aria-label="Cartes">
     <div class="dhead">
-      <p><span id="who"></span> <span id="note" aria-live="polite"></span></p>
+      <div class="who">
+        <button class="arrow" id="prev" data-act="step" data-d="-1" aria-label="Joueur précédent">‹</button>
+        <span id="who"></span>
+        <button class="arrow" id="nextP" data-act="step" data-d="1" aria-label="Joueur suivant">›</button>
+      </div>
       <button class="link" id="undoCard" data-act="undoCard">Annuler la carte</button>
     </div>
+    <p id="note" aria-live="polite" hidden></p>
     <div class="deck" id="nums"></div>
     <div class="deck mods" id="mods"></div>
     <div class="tools">
@@ -289,6 +304,8 @@ function render() {
   if (!p) return;
   $('who').textContent = p.name;
   $('note').textContent = note || (h.manual != null ? '' : h.bust ? 'Bust : 0 point' : h.nums.length === 7 ? 'Flip 7 : +15' : '');
+  $('note').hidden = !$('note').textContent;
+  $('prev').disabled = $('nextP').disabled = s.players.length < 2;
   $('note').className = h.bust && !note.startsWith('Seconde') ? 'bad' : '';
   const locked = h.bust && h.manual == null;
   for (const b of $('nums').children) {
@@ -307,8 +324,10 @@ function render() {
 }
 
 function renderSheet() {
-  $('roster').innerHTML = s.players.map(p => `<li style="--c:${color(p)}">
+  $('roster').innerHTML = s.players.map((p, i) => `<li style="--c:${color(p)}">
     <input class="rn" data-id="${p.id}" value="${esc(p.name)}" maxlength="20" autocomplete="off" enterkeyhint="done" aria-label="Nom du joueur">
+    <button class="ghost mv" data-act="move" data-d="-1" data-id="${p.id}" aria-label="Monter ${esc(p.name)}" ${i ? '' : 'disabled'}>↑</button>
+    <button class="ghost mv" data-act="move" data-d="1" data-id="${p.id}" aria-label="Descendre ${esc(p.name)}" ${i < s.players.length - 1 ? '' : 'disabled'}>↓</button>
     <button class="ghost x" data-act="del" data-id="${p.id}" aria-label="Retirer ${esc(p.name)}">Retirer</button></li>`).join('');
   $('histWrap').innerHTML = s.rounds.length ? `<div class="tbl"><table>
     <thead><tr><th>Manche</th>${s.players.map(p => `<th>${esc(p.name)}</th>`).join('')}</tr></thead>
@@ -338,9 +357,22 @@ function scoreRound() {
   $('manual').blur();
   const r = {};
   for (const p of s.players) r[p.id] = s.hand[p.id] ? handTotal(s.hand[p.id]) : 0;
+  const before = { hand: s.hand, sel };
   s.rounds.push(r);
   newRound();
+  showToast(`Manche ${s.rounds.length} validée`, before);
 }
+
+// For a few seconds after validating, the round can be taken back with its cards.
+let toastTimer, lastRound;
+function showToast(text, data) {
+  lastRound = data;
+  $('toastText').textContent = text;
+  $('toast').hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 6000);
+}
+function hideToast() { $('toast').hidden = true; lastRound = null; }
 
 function newRound() {
   s.hand = {}; hist.length = 0; note = ''; sel = s.players[0]?.id;
@@ -351,6 +383,7 @@ function newRound() {
 
 function reset(clear) {
   s = { next: s.next, players: clear ? [] : s.players, rounds: [], hand: {} };
+  hideToast();
   newRound();
 }
 
@@ -370,6 +403,22 @@ document.addEventListener('click', e => {
   const id = +b.dataset.id;
   ({
     pick: () => { sel = id; note = ''; render(); },
+    step: () => {
+      const n = s.players.length, i = s.players.findIndex(p => p.id === sel);
+      sel = s.players[(i + +b.dataset.d + n) % n].id; note = ''; render();
+      document.querySelector('.p.sel')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    },
+    undoRound: () => {
+      if (!lastRound) return;
+      s.rounds.pop(); s.hand = lastRound.hand; sel = lastRound.sel; hist.length = 0; note = '';
+      hideToast(); commit();
+    },
+    move: () => {
+      const i = s.players.findIndex(p => p.id === id), j = i + +b.dataset.d;
+      [s.players[i], s.players[j]] = [s.players[j], s.players[i]];
+      commit(); renderSheet();
+      document.querySelector(`.mv[data-id="${id}"][data-d="${b.dataset.d}"]`)?.focus();
+    },
     num: () => play(h => drawNumber(h, +b.dataset.n)),
     mod: () => play(h => { const m = modKey(b), i = h.mods.indexOf(m); i < 0 ? h.mods.push(m) : h.mods.splice(i, 1); }),
     sc: () => play(h => { h.sc = !h.sc; }),
